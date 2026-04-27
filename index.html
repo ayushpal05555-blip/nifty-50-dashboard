@@ -883,11 +883,39 @@ if(typeof Plotly !== 'undefined'){ initCharts(); }
     }
   }
 
+  function normalizeForecastPayload(raw, sourceLabel){
+    if(!raw) return null;
+    // Server responses include { ok: true, ... } but static artifact json won't.
+    if(raw.ok === undefined){
+      return { ok: true, source: sourceLabel || 'STATIC ARTIFACT', ...raw };
+    }
+    return { source: sourceLabel || raw.source || 'FORECAST', ...raw };
+  }
+
+  async function fetchFirstJson(urls){
+    let lastErr = null;
+    for(const url of urls){
+      try{
+        const res = await fetch(url, { cache: 'no-store' });
+        if(!res.ok) throw new Error(`http ${res.status}`);
+        return { url, json: await res.json() };
+      }catch(e){
+        lastErr = e;
+      }
+    }
+    throw lastErr || new Error('All forecast sources failed');
+  }
+
   async function refreshForecastFeed(){
     try{
-      const res = await fetch('/api/forecast', { cache: 'no-store' });
-      if(!res.ok) throw new Error('Forecast API failed');
-      const payload = await res.json();
+      // GitHub Pages is static and cannot serve /api/forecast. Fall back to the committed artifact file.
+      const candidates = [
+        apiUrl('/api/forecast'),
+        './ml/artifacts/latest_forecast.json',
+        'ml/artifacts/latest_forecast.json'
+      ];
+      const { url, json: raw } = await fetchFirstJson(candidates);
+      const payload = normalizeForecastPayload(raw, url.includes('/api/') ? 'FORECAST API' : 'FORECAST ARTIFACT');
       if(!payload?.ok) throw new Error('Forecast unavailable');
       applyForecastSnapshot(payload);
       feedSource = `${feedSource} + FORECAST`;
@@ -943,6 +971,32 @@ if(typeof Plotly !== 'undefined'){ initCharts(); }
     return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
   }
 
+  function getApiBase(){
+    // Lets a static host (e.g. GitHub Pages) call your deployed backend APIs.
+    // Priority: ?apiBase=... -> localStorage -> window.API_BASE -> same-origin ("")
+    try{
+      const u = new URL(location.href);
+      const q = u.searchParams.get('apiBase');
+      if(q){
+        const cleaned = String(q).trim().replace(/\/+$/, '');
+        localStorage.setItem('API_BASE', cleaned);
+        return cleaned;
+      }
+    }catch(_e){}
+    try{
+      const stored = localStorage.getItem('API_BASE');
+      if(stored) return String(stored).trim().replace(/\/+$/, '');
+    }catch(_e){}
+    const globalBase = (window.API_BASE ? String(window.API_BASE) : '').trim();
+    return globalBase ? globalBase.replace(/\/+$/, '') : '';
+  }
+
+  function apiUrl(path){
+    const base = getApiBase();
+    if(!base) return path;
+    return `${base}${path}`;
+  }
+
   async function fetchYahooQuotes(symbols){
     const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(symbols.join(','))}&_=${Date.now()}`;
     const res = await fetch(url, { cache: 'no-store' });
@@ -955,7 +1009,7 @@ if(typeof Plotly !== 'undefined'){ initCharts(); }
   async function refreshLiveMarketFeed(){
     // Prefer your backend (/api/live). If unavailable, fall back to direct quotes.
     try{
-      const res = await withTimeout(fetch('/api/live', { cache: 'no-store' }), 4000);
+      const res = await withTimeout(fetch(apiUrl('/api/live'), { cache: 'no-store' }), 4000);
       if(!res.ok) throw new Error('API fetch failed');
       const payload = await res.json();
       if(!payload?.ok) throw new Error('API returned fallback');
@@ -1057,6 +1111,10 @@ if(typeof Plotly !== 'undefined'){ initCharts(); }
 
   const retrainBtn = document.getElementById('retrain-now-btn');
   if(retrainBtn){
+    // Hide retrain in static deployments (e.g., GitHub Pages) where /api/retrain won't exist.
+    if(location.hostname.endsWith('github.io') || location.protocol === 'file:'){
+      retrainBtn.style.display = 'none';
+    }
     retrainBtn.addEventListener('click', async () => {
       const statusEl = document.getElementById('auto-refresh-status');
       retrainBtn.disabled = true;
@@ -1064,7 +1122,7 @@ if(typeof Plotly !== 'undefined'){ initCharts(); }
       retrainBtn.textContent = 'RETRAINING...';
       if(statusEl) statusEl.textContent = 'AUTO REFRESH · ML RETRAIN IN PROGRESS...';
       try{
-        const res = await fetch('/api/retrain', { method: 'POST' });
+        const res = await fetch(apiUrl('/api/retrain'), { method: 'POST' });
         const out = await res.json();
         if(!res.ok || !out?.ok){
           throw new Error(out?.error || 'Retrain failed');
