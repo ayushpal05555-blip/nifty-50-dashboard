@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NIFTY 50 · AI Directional Probability Model · LIVE</title>
+<script>
+/* ── Plotly multi-CDN fallback loader ─────────────────────────────
+   Tries 3 CDNs in sequence. All chart code runs only AFTER Plotly
+   is confirmed loaded, so "Plotly is not defined" is impossible.   */
+(function(){
+  var CDNS = [
+    "https://cdn.plot.ly/plotly-2.30.0.min.js",
+    "https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.30.0/plotly.min.js",
+    "https://unpkg.com/plotly.js@2.30.0/dist/plotly.min.js",
+    "https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.30.0/plotly.min.js",
+    "https://cdn.jsdelivr.net/npm/plotly.js@2.30.0/dist/plotly.min.js"
+  ];
+  var idx = 0;
+  function load(url){
+    var s = document.createElement('script');
+    s.src = url;
+    s.onload = function(){ window.__plotlyReady = true; initCharts(); };
+    s.onerror = function(){
+      idx++;
+      if(idx < CDNS.length){ load(CDNS[idx]); }
+      else {
+        var msg =
+          '<div style="color:#ff1744;font-family:monospace;padding:40px;font-size:16px;">' +
+          '⚠ Could not load Plotly from any CDN.<br>' +
+          'This usually means your network blocks common CDNs (or you are offline).<br>' +
+          'Try a different network / VPN, then reload.' +
+          '</div>';
+        (document.body || document.documentElement).innerHTML = msg;
+      }
+    };
+    document.head.appendChild(s);
+  }
+  load(CDNS[0]);
+})();
+</script>
+<style>
+  :root{
+    --bg:#050a0f;--bg2:#0b1320;--bg3:#0f1c2e;
+    --border:#1a2d4a;--border2:#1e3a5f;
+    --accent:#00c4ff;--accent2:#0087cc;
+    --green:#00e676;--red:#ff1744;
+    --gold:#ffd600;--orange:#ff6d00;--purple:#b44bff;
+    --text:#c8d8e8;--text2:#7a95b0;--text3:#3d5a78;
+    --card:#0c1828;--card2:#0f1f35;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:'Courier New',monospace;overflow-x:hidden;}
+
+  /* TICKER */
+  #ticker-bar{background:var(--bg2);border-bottom:1px solid var(--border);padding:6px 0;overflow:hidden;white-space:nowrap;font-size:11px;letter-spacing:.5px;}
+  #ticker-inner{display:inline-block;animation:ticker 45s linear infinite;}
+  @keyframes ticker{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+  .tick-item{display:inline-block;margin-right:40px;}
+  .tick-up{color:var(--green);}.tick-dn{color:var(--red);}.tick-lbl{color:var(--text2);margin-right:6px;}
+
+  /* HEADER */
+  #header{background:linear-gradient(135deg,var(--bg2) 0%,#0a1525 100%);border-bottom:1px solid var(--border2);padding:16px 30px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+  .logo{font-size:11px;color:var(--accent);letter-spacing:3px;font-weight:bold;}
+  .logo-sub{font-size:9px;color:var(--text2);letter-spacing:2px;margin-top:2px;}
+  .live-badge{
+    background:rgba(0,230,118,.1);border:1px solid var(--green);
+    color:var(--green);padding:6px 14px;font-size:10px;letter-spacing:2px;
+    border-radius:2px;display:flex;align-items:center;gap:8px;
+  }
+  .header-controls{display:flex;align-items:center;gap:10px;}
+  .refresh-btn{
+    background:linear-gradient(135deg,#003a57,#006699);
+    border:1px solid #00c4ff;color:#d9f4ff;
+    padding:7px 12px;font-size:10px;letter-spacing:1px;
+    border-radius:3px;cursor:pointer;font-family:'Courier New',monospace;
+  }
+  .refresh-btn:hover{filter:brightness(1.12);}
+  .retrain-btn{
+    background:linear-gradient(135deg,#2a2200,#665200);
+    border:1px solid #ffd600;color:#fff6c2;
+    padding:7px 12px;font-size:10px;letter-spacing:1px;
+    border-radius:3px;cursor:pointer;font-family:'Courier New',monospace;
+  }
+  .retrain-btn:hover{filter:brightness(1.12);}
+  .retrain-btn:disabled{opacity:.6;cursor:not-allowed;}
+  .live-dot{display:inline-block;width:7px;height:7px;background:var(--green);border-radius:50%;animation:pulse 1.5s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(1.5)}}
+
+  /* LIVE DATA STRIP */
+  #live-strip{
+    background:linear-gradient(90deg,#030d1a,#041220,#030d1a);
+    border-bottom:1px solid var(--green);
+    padding:10px 30px;display:flex;gap:30px;flex-wrap:wrap;align-items:center;
+  }
+  .live-stat{display:flex;align-items:center;gap:10px;}
+  .live-stat-lbl{font-size:8px;color:var(--text3);letter-spacing:2px;}
+  .live-stat-val{font-size:14px;font-weight:bold;}
+  .live-strip-title{font-size:8px;letter-spacing:3px;color:var(--green);border:1px solid rgba(0,230,118,.3);padding:3px 8px;}
+
+  /* HERO */
+  #hero{background:linear-gradient(180deg,#030e1e 0%,var(--bg) 100%);padding:40px 30px;text-align:center;border-bottom:1px solid var(--border);position:relative;overflow:hidden;}
+  #hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,#220000 0%,transparent 65%);pointer-events:none;}
+  .hero-title{font-size:10px;letter-spacing:4px;color:var(--text2);margin-bottom:10px;}
+  .hero-verdict{font-size:clamp(32px,5.5vw,64px);font-weight:bold;letter-spacing:4px;text-shadow:0 0 50px currentColor;}
+  .hero-prob{font-size:clamp(52px,10vw,110px);font-weight:bold;letter-spacing:-2px;margin:6px 0;text-shadow:0 0 80px currentColor;}
+  .hero-sub{font-size:12px;color:var(--text2);letter-spacing:2px;}
+  .verdict-down{color:var(--red);}
+  .verdict-up{color:var(--green);}
+
+  /* DELTA BADGE */
+  .delta-badge{
+    display:inline-flex;align-items:center;gap:8px;
+    background:rgba(255,23,68,.12);border:1px solid rgba(255,23,68,.4);
+    padding:5px 14px;border-radius:2px;margin-top:14px;
+    font-size:11px;color:var(--red);letter-spacing:1px;
+  }
+
+  /* HERO META */
+  .hero-meta{display:flex;justify-content:center;gap:30px;margin-top:28px;flex-wrap:wrap;}
+  .hero-stat{text-align:center;padding:12px 16px;background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:3px;min-width:110px;}
+  .hero-stat-val{font-size:20px;font-weight:bold;}
+  .hero-stat-lbl{font-size:8px;color:var(--text3);letter-spacing:2px;margin-top:4px;}
+
+  /* HEALTH PANEL */
+  .health-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;}
+  .health-item{padding:10px;border:1px solid var(--border);border-radius:3px;background:rgba(255,255,255,.02);}
+  .health-val{font-size:18px;font-weight:bold;}
+  .health-lbl{font-size:8px;color:var(--text3);letter-spacing:2px;margin-top:4px;text-transform:uppercase;}
+  .status-chip{
+    display:inline-flex;align-items:center;justify-content:center;
+    min-width:140px;padding:8px 12px;border-radius:3px;
+    border:1px solid var(--border);font-size:11px;letter-spacing:1px;font-weight:bold;
+  }
+  .metric-good{color:var(--green) !important;}
+  .metric-warn{color:var(--gold) !important;}
+  .metric-bad{color:var(--red) !important;}
+  .rationale-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:12px;}
+  .rationale-box{padding:14px;border:1px solid var(--border);border-radius:3px;background:rgba(255,255,255,.02);}
+  .rationale-title{font-size:9px;letter-spacing:2px;color:var(--text2);margin-bottom:10px;text-transform:uppercase;}
+  .rationale-item{display:flex;justify-content:space-between;gap:10px;font-size:10px;padding:4px 0;border-bottom:1px dashed rgba(61,90,120,.35);}
+  .rationale-item:last-child{border-bottom:none;}
+  .rationale-key{color:var(--text);}
+  .rationale-val{color:var(--accent);font-weight:bold;}
+  .rationale-summary{font-size:10px;line-height:1.5;color:var(--text);padding:8px 10px;border:1px solid var(--border);background:rgba(0,196,255,.06);border-radius:3px;}
+
+  /* SIGNAL CHANGE BANNER */
+  .signal-banner{
+    background:linear-gradient(90deg,rgba(255,23,68,.08),rgba(255,23,68,.15),rgba(255,23,68,.08));
+    border:1px solid rgba(255,23,68,.3);border-radius:3px;
+    padding:10px 20px;text-align:center;font-size:11px;color:var(--red);
+    letter-spacing:2px;margin:16px 0;
+  }
+
+  /* LAYOUT */
+  .main{padding:24px 20px;max-width:1800px;margin:0 auto;}
+  .section-title{font-size:9px;letter-spacing:3px;color:var(--text2);border-left:3px solid var(--accent);padding-left:10px;margin:32px 0 16px;text-transform:uppercase;}
+  .section-title.live{border-left-color:var(--green);color:var(--green);}
+  .grid-3{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;}
+  .grid-2{display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:16px;}
+
+  /* CARDS */
+  .card{background:var(--card);border:1px solid var(--border);border-radius:4px;padding:20px;position:relative;overflow:hidden;}
+  .card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),transparent);}
+  .card.live-card::before{background:linear-gradient(90deg,var(--green),transparent);}
+  .card-title{font-size:9px;letter-spacing:2px;color:var(--text2);margin-bottom:16px;text-transform:uppercase;}
+
+  /* MODEL CARDS */
+  .model-card{background:var(--card);border:1px solid var(--border);border-radius:4px;padding:20px;}
+  .model-card.live-card{border-color:rgba(0,230,118,.3);}
+  .model-name{font-size:11px;letter-spacing:2px;color:var(--accent);margin-bottom:4px;}
+  .model-acc{font-size:9px;color:var(--text2);margin-bottom:14px;}
+  .prob-section{margin-bottom:8px;}
+  .prob-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;}
+  .prob-label{font-size:10px;color:var(--text2);}
+  .prob-val{font-size:16px;font-weight:bold;}
+  .prob-val.live{font-size:22px;}
+  .prob-bar-wrap{height:6px;background:#1a2d4a;border-radius:3px;margin-bottom:12px;overflow:hidden;}
+  .prob-bar-fill{height:100%;border-radius:3px;}
+  .bar-up{background:linear-gradient(90deg,var(--green),#00ff9d);}
+  .bar-dn{background:linear-gradient(90deg,var(--red),#ff6b6b);}
+  .prev-row{display:flex;justify-content:space-between;font-size:9px;color:var(--text3);padding-top:8px;border-top:1px solid var(--border);}
+  .fold-pips{display:flex;gap:4px;margin-top:8px;}
+  .fold-pip{flex:1;height:18px;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:bold;}
+
+  /* FEATURE VECTOR TABLE */
+  .fv-table{width:100%;border-collapse:collapse;font-size:9px;}
+  .fv-table td{padding:5px 8px;border-bottom:1px solid var(--border);}
+  .fv-table .fv-name{color:var(--text2);}
+  .fv-table .fv-val{text-align:right;font-weight:bold;}
+  .fv-table .fv-bar{width:80px;}
+  .fv-bar-inner{height:4px;border-radius:2px;background:var(--accent);}
+
+  /* CM GRID */
+  .cm-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:10px;}
+  .cm-cell{padding:10px;text-align:center;border-radius:3px;font-size:18px;font-weight:bold;}
+  .cm-tp{background:rgba(0,230,118,.2);color:var(--green);}
+  .cm-fp{background:rgba(255,23,68,.15);color:var(--red);}
+  .cm-fn{background:rgba(255,23,68,.15);color:var(--red);}
+  .cm-tn{background:rgba(0,230,118,.2);color:var(--green);}
+
+  /* PLOT BOX */
+  .plot-box{background:var(--card);border:1px solid var(--border);border-radius:4px;padding:12px;}
+  .plot-box.live-border{border-color:rgba(0,230,118,.3);}
+
+  /* Plotly (WebGL) canvas alignment tweak for FI 3D */
+  #plot-fi3d .gl-container > #scene > canvas{
+    left:-2px !important;
+    top:-15px !important;
+  }
+
+  footer{text-align:center;padding:20px;border-top:1px solid var(--border);color:var(--text3);font-size:9px;letter-spacing:2px;background:var(--bg2);}
+</style>
+</head>
+<body>
+
+<!-- TICKER -->
+<div id="ticker-bar"><div id="ticker-inner">
+  <span class="tick-item"><span class="tick-lbl">NIFTY50</span><span class="tick-up">24,328.00 ▲ +1.92%</span></span>
+  <span class="tick-item"><span class="tick-lbl">INDIA VIX</span><span class="tick-up">15.40 ▼ NORMALIZING</span></span>
+  <span class="tick-item"><span class="tick-lbl">ENSEMBLE DOWN</span><span class="tick-dn">74.20% ▼ BEARISH</span></span>
+  <span class="tick-item"><span class="tick-lbl">CONFIDENCE</span><span class="tick-dn">48.4% ↓ -34.7pp</span></span>
+  <span class="tick-item"><span class="tick-lbl">LR P(DOWN)</span><span class="tick-dn">78.20%</span></span>
+  <span class="tick-item"><span class="tick-lbl">RF P(DOWN)</span><span class="tick-dn">66.10%</span></span>
+  <span class="tick-item"><span class="tick-lbl">GB P(DOWN)</span><span class="tick-dn">78.30%</span></span>
+  <span class="tick-item"><span class="tick-lbl">BLENDED VOL</span><span class="tick-dn">3.95% / MONTH</span></span>
+  <span class="tick-item"><span class="tick-lbl">PREV SIGNAL</span><span class="tick-lbl">MAR 21: DOWN 91.57% → NOW</span><span class="tick-dn">APR 25: DOWN 74.20%</span></span>
+  <span class="tick-item"><span class="tick-lbl">LIVE DATE</span><span class="tick-up js-live-date">APRIL 25, 2026</span></span>
+  <span class="tick-item"><span class="tick-lbl">NIFTY50</span><span class="tick-up">24,328.00 ▲ +1.92%</span></span>
+  <span class="tick-item"><span class="tick-lbl">INDIA VIX</span><span class="tick-up">15.40 ▼ NORMALIZING</span></span>
+  <span class="tick-item"><span class="tick-lbl">ENSEMBLE DOWN</span><span class="tick-dn">74.20% ▼ BEARISH</span></span>
+  <span class="tick-item"><span class="tick-lbl">CONFIDENCE</span><span class="tick-dn">48.4% ↓ -34.7pp</span></span>
+  <span class="tick-item"><span class="tick-lbl">LR P(DOWN)</span><span class="tick-dn">78.20%</span></span>
+  <span class="tick-item"><span class="tick-lbl">RF P(DOWN)</span><span class="tick-dn">66.10%</span></span>
+  <span class="tick-item"><span class="tick-lbl">GB P(DOWN)</span><span class="tick-dn">78.30%</span></span>
+  <span class="tick-item"><span class="tick-lbl">BLENDED VOL</span><span class="tick-dn">3.95% / MONTH</span></span>
+  <span class="tick-item"><span class="tick-lbl">PREV SIGNAL</span><span class="tick-lbl">MAR 21: DOWN 91.57% → NOW</span><span class="tick-dn">APR 25: DOWN 74.20%</span></span>
+  <span class="tick-item"><span class="tick-lbl">LIVE DATE</span><span class="tick-up js-live-date">APRIL 25, 2026</span></span>
+</div></div>
+
+<!-- HEADER -->
+<div id="header">
+  <div>
+    <div class="logo">◈ QUANTAI · NIFTY 50 · DIRECTIONAL AI ENGINE</div>
+    <div class="logo-sub">3-MODEL ENSEMBLE · 5-FOLD TIME-SERIES CV · VIX-BLENDED VOLATILITY</div>
+  </div>
+  <div class="header-controls">
+    <button id="refresh-now-btn" class="refresh-btn" type="button">REFRESH NOW</button>
+    <button id="retrain-now-btn" class="retrain-btn" type="button">RETRAIN ML</button>
+    <div class="live-badge">
+      <span class="live-dot"></span>
+      LIVE DATA · <span id="live-date-header">APRIL 25, 2026</span>
+    </div>
+  </div>
+</div>
+
+<!-- LIVE DATA STRIP -->
+<div id="live-strip">
+  <div class="live-strip-title">⚡ LIVE INPUTS</div>
+  <div class="live-stat"><span class="live-stat-lbl">NIFTY 50</span><span id="live-strip-nifty" class="live-stat-val" style="color:var(--green)">24,328.00</span></div>
+  <div class="live-stat"><span class="live-stat-lbl">MTD RETURN</span><span id="live-strip-mtd" class="live-stat-val" style="color:var(--green)">+1.92%</span></div>
+  <div class="live-stat"><span class="live-stat-lbl">INDIA VIX</span><span id="live-strip-vix" class="live-stat-val" style="color:var(--green)">15.40</span></div>
+  <div class="live-stat"><span class="live-stat-lbl">BLENDED VOL/MO</span><span id="live-strip-volmo" class="live-stat-val" style="color:var(--orange)">3.95%</span></div>
+  <div class="live-stat"><span class="live-stat-lbl">RSI-6M</span><span id="live-strip-rsi6m" class="live-stat-val" style="color:var(--gold)">63.40</span></div>
+  <div class="live-stat"><span class="live-stat-lbl">6M MOMENTUM</span><span id="live-strip-mom6m" class="live-stat-val" style="color:var(--green)">+9.78%</span></div>
+  <div class="live-stat"><span class="live-stat-lbl">DEV FROM 6M MA</span><span id="live-strip-dev6m" class="live-stat-val" style="color:var(--green)">+4.12%</span></div>
+  <div class="live-stat"><span class="live-stat-lbl">REGIME SIGNAL</span><span id="live-strip-regime" class="live-stat-val" style="color:var(--text)">+0.036</span></div>
+</div>
+
+<!-- HERO -->
+<div id="hero">
+  <div class="hero-title">◈ LIVE ENSEMBLE FORECAST · MAY 2026 DIRECTION</div>
+  <div id="hero-verdict" class="hero-verdict verdict-down">▼ STRONGLY BEARISH</div>
+  <div class="hero-prob verdict-down" id="hero-prob">74.2%</div>
+  <div class="hero-sub">PROBABILITY OF DOWNSIDE NEXT MONTH · ALL 3 MODELS AGREE</div>
+  <div>
+    <div id="signal-delta-badge" class="delta-badge">
+      ▼ SIGNAL MODERATED: -17.4pp FROM MAR 21 RUN (91.6% → 74.2% DOWN)
+    </div>
+  </div>
+  <div class="hero-meta">
+    <div class="hero-stat"><div id="hero-up-prob" class="hero-stat-val" style="color:var(--red)">25.8%</div><div class="hero-stat-lbl">↑ UP Probability</div></div>
+    <div class="hero-stat"><div id="hero-confidence" class="hero-stat-val" style="color:var(--gold)">48.4%</div><div class="hero-stat-lbl">Signal Confidence</div></div>
+    <div class="hero-stat"><div id="hero-expected-move" class="hero-stat-val" style="color:var(--gold)">+1.32%</div><div class="hero-stat-lbl">Expected Move</div></div>
+    <div class="hero-stat"><div id="hero-live-price" class="hero-stat-val" style="color:var(--green)">₹24,328</div><div class="hero-stat-lbl">Live Price</div></div>
+    <div class="hero-stat"><div id="hero-live-vix" class="hero-stat-val" style="color:var(--green)">15.40</div><div class="hero-stat-lbl">India VIX</div></div>
+    <div class="hero-stat"><div id="hero-live-volmo" class="hero-stat-val" style="color:var(--purple)">3.95%</div><div class="hero-stat-lbl">Blended Vol/Mo</div></div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+<!-- SIGNAL CHANGE BANNER -->
+<div class="signal-banner">
+  ⚠ SIGNAL UPDATE · PRIOR RUN (MAR 21 DATA) → DOWN 91.6% · CURRENT RUN (APR 25 DATA) → DOWN 74.2% · DELTA: +17.4pp TOWARD NEUTRAL · COOLER VIX + NORMALIZED RSI REDUCED EXTREME BEAR CONVICTION
+</div>
+
+<!-- MODEL HEALTH -->
+<div class="section-title live">◈ Model Health Snapshot</div>
+<div class="card live-card">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
+    <div style="font-size:9px;letter-spacing:2px;color:var(--text2);">OVERALL MODEL STATUS</div>
+    <div id="health-status-chip" class="status-chip metric-warn">WATCH</div>
+  </div>
+  <div class="health-grid">
+    <div class="health-item"><div id="health-auc" class="health-val" style="color:var(--accent)">--</div><div class="health-lbl">Mean AUC</div></div>
+    <div class="health-item"><div id="health-brier" class="health-val" style="color:var(--gold)">--</div><div class="health-lbl">Mean Brier</div></div>
+    <div class="health-item"><div id="health-precision" class="health-val" style="color:var(--green)">--</div><div class="health-lbl">Precision (Down)</div></div>
+    <div class="health-item"><div id="health-sharpe" class="health-val" style="color:var(--green)">--</div><div class="health-lbl">Backtest Sharpe</div></div>
+    <div class="health-item"><div id="health-dd" class="health-val" style="color:var(--red)">--</div><div class="health-lbl">Max Drawdown</div></div>
+    <div class="health-item"><div id="health-trained-at" class="health-val" style="color:var(--text)">--</div><div class="health-lbl">Last Trained (UTC)</div></div>
+  </div>
+</div>
+
+<!-- EXPLAINABILITY -->
+<div class="section-title live">◈ Explainability & Signal Diagnostics</div>
+<div class="rationale-grid">
+  <div class="rationale-box">
+    <div class="rationale-title">Global Feature Importance (SHAP/Fallback)</div>
+    <div id="global-importance-list">
+      <div class="rationale-item"><span class="rationale-key">Loading...</span><span class="rationale-val">--</span></div>
+    </div>
+  </div>
+  <div class="rationale-box">
+    <div class="rationale-title">Why Signal Changed (vs Previous Run)</div>
+    <div id="signal-change-summary" class="rationale-summary">Waiting for forecast diagnostics...</div>
+    <div id="signal-change-list" style="margin-top:10px;">
+      <div class="rationale-item"><span class="rationale-key">Loading...</span><span class="rationale-val">--</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- LIVE MODEL CARDS -->
+<div class="section-title live">◈ Live Model Predictions · <span id="live-model-date-label">April 25, 2026</span></div>
+<div class="grid-3" id="live-model-cards"></div>
+
+<!-- FEATURE VECTOR -->
+<div class="section-title live">◈ Live Feature Vector (What the Models See)</div>
+<div class="grid-2">
+  <div class="card live-card">
+    <div class="card-title">Computed Live Features</div>
+    <table class="fv-table" id="fv-table"></table>
+  </div>
+  <div class="plot-box live-border"><div id="plot-radar-live" style="height:320px;"></div></div>
+</div>
+
+<!-- LIVE MC PATHS -->
+<div class="section-title live">◈ 3D Live Monte Carlo · VIX-Blended Volatility (80 Paths, 12 Months)</div>
+<div class="plot-box live-border"><div id="plot-mc-live" style="height:480px;"></div></div>
+
+<!-- SIGNAL COMPARISON -->
+<div class="section-title">◈ Signal Comparison: Previous vs Live</div>
+<div class="plot-box"><div id="plot-compare" style="height:300px;"></div></div>
+
+<!-- HISTORICAL MODEL CARDS (original) -->
+<div class="section-title">◈ Historical Baseline (Feb 2026 Model Run)</div>
+<div class="grid-3" id="hist-model-cards"></div>
+
+<!-- 3D CHARTS -->
+<div class="section-title">◈ 3D Feature Importance Surface (Models × Features)</div>
+<div class="plot-box"><div id="plot-fi3d" style="height:460px;"></div></div>
+
+<div class="section-title">◈ 3D Probability Evolution Surface (Time × Models)</div>
+<div class="plot-box"><div id="plot-probsurface" style="height:460px;"></div></div>
+
+<div class="section-title">◈ 3D Model Agreement Scatter Cloud</div>
+<div class="plot-box"><div id="plot-scatter3d" style="height:460px;"></div></div>
+
+<!-- ROLLING ACCURACY -->
+<div class="section-title">◈ Walk-Forward Rolling Accuracy (12-Month Window)</div>
+<div class="plot-box"><div id="plot-rolling" style="height:320px;"></div></div>
+
+<!-- CONFUSION MATRICES -->
+<div class="section-title">◈ Confusion Matrices (Out-of-Sample CV)</div>
+<div class="grid-3" id="cm-cards"></div>
+
+<!-- RADAR + CORR -->
+<div class="section-title">◈ Model Radar & Feature Correlation</div>
+<div class="grid-2">
+  <div class="plot-box"><div id="plot-radar" style="height:360px;"></div></div>
+  <div class="plot-box"><div id="plot-corr" style="height:360px;"></div></div>
+</div>
+
+<!-- FEATURE IMPORTANCE -->
+<div class="section-title">◈ Feature Importance by Model</div>
+<div class="plot-box"><div id="plot-fi" style="height:340px;"></div></div>
+
+</div><!-- end main -->
+
+<footer>
+  QUANTAI · NIFTY 50 AI DIRECTIONAL MODEL · LIVE DATA: <span id="footer-live-date">APRIL 25, 2026</span> · NIFTY=<span id="footer-nifty">24,328.00</span> · INDIA VIX=<span id="footer-vix">15.40</span><br>
+  <span id="auto-refresh-status">AUTO REFRESH · ACTIVE · SYNCING...</span><br>
+  3 ML MODELS · 5-FOLD TIME-SERIES CV · VIX-BLENDED VOLATILITY · FOR RESEARCH ONLY — NOT INVESTMENT ADVICE
+</footer>
+
+<script>
+function initCharts(){
+  if(typeof Plotly === 'undefined'){ setTimeout(initCharts, 100); return; }
+
+const D = {"dates": ["2016-08", "2016-09", "2016-10", "2016-11", "2016-12", "2017-01", "2017-02", "2017-03", "2017-04", "2017-05", "2017-06", "2017-07", "2017-08", "2017-09", "2017-10", "2017-11", "2017-12", "2018-01", "2018-02", "2018-03", "2018-04", "2018-05", "2018-06", "2018-07", "2018-08", "2018-09", "2018-10", "2018-11", "2018-12", "2019-01", "2019-02", "2019-03", "2019-04", "2019-05", "2019-06", "2019-07", "2019-08", "2019-09", "2019-10", "2019-11", "2019-12", "2020-01", "2020-02", "2020-03", "2020-04", "2020-05", "2020-06", "2020-07", "2020-08", "2020-09", "2020-10", "2020-11", "2020-12", "2021-01", "2021-02", "2021-03", "2021-04", "2021-05", "2021-06", "2021-07", "2021-08", "2021-09", "2021-10", "2021-11", "2021-12", "2022-01", "2022-02", "2022-03", "2022-04", "2022-05", "2022-06", "2022-07", "2022-08", "2022-09", "2022-10", "2022-11", "2022-12", "2023-01", "2023-02", "2023-03", "2023-04", "2023-05", "2023-06", "2023-07", "2023-08", "2023-09", "2023-10", "2023-11", "2023-12", "2024-01", "2024-02", "2024-03", "2024-04", "2024-05", "2024-06", "2024-07", "2024-08", "2024-09", "2024-10", "2024-11", "2024-12", "2025-01", "2025-02", "2025-03", "2025-04", "2025-05", "2025-06", "2025-07", "2025-08", "2025-09", "2025-10", "2025-11", "2025-12", "2026-01", "2026-02"], "log_returns": [0.0987471131815158, -0.024224721048662013, -0.045093663280381995, 0.06032810671667831, -0.03350911556588245, 0.012896912883314484, 0.04466425020418909, -0.08669333357553202, 0.0223187216992822, 0.06584529306659638, -0.00760335103129618, 0.0690928494540284, -0.03998663160500789, -0.009785152034556543, 0.1291963759073246, -0.05574020414598034, 0.0229707913867639, -0.04931873195031836, 0.04719125428282232, 0.0364744024377501, -0.038395300070409075, 0.06945624061347588, -0.0262460075583506, 0.02218586126276926, -0.0011516040203263668, 0.09720376125982616, -0.05527187354822117, -0.027783183632660777, 0.07651821392686005, -0.062069504661494676, 0.06018041086018468, -0.0667536917502217, 0.03273089040725748, 0.06184495787154835, 0.02691692476833343, -0.009360085208679723, -0.0002564247060470421, 0.0030572946023370825, -0.02969335807776959, 0.034229018004773425, 0.017304938518058317, 0.05568208775752382, -0.013177212001543736, -0.05743039419435746, 0.07375158743458474, -0.013003917283139155, -0.0003858907139940336, 0.046634891983778376, 0.02009749216260359, 0.005098641631917992, -0.04318372685299679, 0.023662082425171475, 0.026229209468287263, 0.025663739499369245, -0.032785867247668576, 0.016106104630433854, -0.0180593404168908, 0.005363128051482371, 0.06264219083700684, 0.021603917885024613, -0.030298906306906643, 0.03562531701442895, -0.009415057411689923, -0.01915744451726171, 0.033606608996600625, 0.03673866724364913, -0.03260551438681322, 0.04699458810760934, -0.10023978259749566, 0.09572587584473269, -0.011242591489274003, -0.0026558840364912704, 0.016528761577254542, -0.04504889199493039, 0.05107230116323255, 0.020605959200106674, 0.03281143960557015, -0.040394390525940536, -0.0002659252789652493, 0.013972033291813613, 0.039385307457212484, -0.007024819562513181, -0.013371900101995661, 0.030259986490883645, -0.0030937749311611014, 0.025688707764153516, -0.031148831404496983, 0.014750968877609636, 0.004798610975439251, -0.017821928143093392, 0.045237263203973165, 0.005281484338396081, 0.0005010588951496503, 0.0008510627343725238, -0.019621599061130993, 0.027612250962039977, 0.0076048625717890705, -0.003834337092109404, 0.01940815338429797, 0.017486981283076207, 0.03551581811431742, -0.02878822644240263, 0.007356846765717712, -0.0010697405469345745, -0.03222650962723486, 0.04443520432956251, 0.007297524728860251, 0.05192339990134688, -0.04586650018796622, 0.015152922459957172, -0.0011113885860290697, -0.01678710741848694, 0.050033931987506115, -0.0021068812361708447, 0.005989828173187692], "actual": [0, 0, 1, 0, 1, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0, 1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1, 0, 1, 0, 0, 1, 0, 1, 0], "feature_cols": ["Lag-1 Return", "Lag-2 Return", "Lag-3 Return", "Dev from 3M MA", "Dev from 6M MA", "3M Momentum", "6M Momentum", "3M Volatility", "H-L Spread", "Volume Change", "Vol Change 3M", "Regime", "RSI-6M"], "cv_results": {"Logistic Regression": {"mean_acc": 0.7263157894736842, "fold_accs": [0.7894736842105263, 0.7894736842105263, 0.7368421052631579, 0.7368421052631579, 0.5789473684210527]}, "Random Forest": {"mean_acc": 0.6526315789473685, "fold_accs": [0.5263157894736842, 0.7894736842105263, 0.7894736842105263, 0.631578947368421, 0.5263157894736842]}, "Gradient Boosting": {"mean_acc": 0.6842105263157895, "fold_accs": [0.7368421052631579, 0.7894736842105263, 0.7894736842105263, 0.6842105263157895, 0.42105263157894735]}}, "final_probas": {"Logistic Regression": 45.08, "Random Forest": 41.5, "Gradient Boosting": 13.19}, "final_down": {"Logistic Regression": 54.92, "Random Forest": 58.5, "Gradient Boosting": 86.81}, "ensemble_prob": 33.37, "ensemble_down": 66.63, "expected_move": 1.601, "confidence": 33.3, "feature_importances": {"Logistic Regression": {"Lag-1 Return": 0.008421349852695735, "Lag-2 Return": 0.015259501418609043, "Lag-3 Return": 0.15164420958752728, "Dev from 3M MA": 0.07560275118227161, "Dev from 6M MA": 0.19096620870194309, "3M Momentum": 0.09832319620106313, "6M Momentum": 0.10574259885575085, "3M Volatility": 0.05318161240677388, "H-L Spread": 0.08446217516126234, "Volume Change": 0.0751661686137498, "Vol Change 3M": 0.02728140112720483, "Regime": 0.016986704829158903, "RSI-6M": 0.09696212206198938}, "Random Forest": {"Lag-1 Return": 0.01424091721967575, "Lag-2 Return": 0.028806209589830205, "Lag-3 Return": 0.06256273213222807, "Dev from 3M MA": 0.13067074742943882, "Dev from 6M MA": 0.22399364101976826, "3M Momentum": 0.10612488459869986, "6M Momentum": 0.16234571583049384, "3M Volatility": 0.02295138959481008, "H-L Spread": 0.03269296621691262, "Volume Change": 0.052548411758082475, "Vol Change 3M": 0.017923510367780972, "Regime": 0.02498853299903737, "RSI-6M": 0.12015034124324171}, "Gradient Boosting": {"Lag-1 Return": 0.016128290848308056, "Lag-2 Return": 0.04082824629517099, "Lag-3 Return": 0.05699163261972864, "Dev from 3M MA": 0.05654035169047572, "Dev from 6M MA": 0.41453354181794644, "3M Momentum": 0.041668710638540045, "6M Momentum": 0.10523693926360649, "3M Volatility": 0.004147274987287917, "H-L Spread": 0.05865206697074697, "Volume Change": 0.11548073068614617, "Vol Change 3M": 0.006600753846524666, "Regime": 0.017545097734838633, "RSI-6M": 0.06564636260067928}}, "conf_matrices": {"Logistic Regression": [[25, 16], [10, 44]], "Random Forest": [[17, 24], [9, 45]], "Gradient Boosting": [[21, 20], [10, 44]]}, "rolling_acc": {"Logistic Regression": [null, null, null, null, null, null, null, null, null, null, null, null, null, null, 0.8333333333333334, 0.8571428571428571, 0.875, 0.8888888888888888, 0.9, 0.9090909090909091, 0.9166666666666666, 0.9166666666666666, 0.8333333333333334, 0.9166666666666666, 0.9166666666666666, 0.8333333333333334, 0.75, 0.75, 0.75, 0.75, 0.75, 0.75, 0.75, 0.75, 0.75, 0.75, 0.6666666666666666, 0.6666666666666666, 0.75, 0.75, 0.75, 0.75, 0.75, 0.75, 0.6666666666666666, 0.6666666666666666, 0.75, 0.6666666666666666, 0.75, 0.8333333333333334, 0.8333333333333334, 0.75, 0.75, 0.75, 0.75, 0.75, 0.8333333333333334, 0.8333333333333334, 0.8333333333333334, 0.8333333333333334, 0.8333333333333334, 0.75, 0.75, 0.75, 0.75, 0.75, 0.6666666666666666, 0.6666666666666666, 0.6666666666666666, 0.6666666666666666, 0.5833333333333334, 0.6666666666666666, 0.6666666666666666, 0.75, 0.75, 0.8333333333333334, 0.8333333333333334, 0.75, 0.8333333333333334, 0.75, 0.75, 0.75, 0.75, 0.75, 0.75, 0.6666666666666666, 0.6666666666666666, 0.6666666666666666, 0.5833333333333334, 0.6666666666666666, 0.6666666666666666, 0.6666666666666666, 0.5833333333333334, 0.5833333333333334, 0.6666666666666666, 0.6666666666666666, 0.6666666666666666, 0.6666666666666666, 0.5833333333333334, 0.5, 0.5833333333333334, 0.5833333333333334, 0.5833333333333334], "Random Forest": [null, null, null, null, null, null, null, null, null, null, null, null, null, null, 0.5, 0.42857142857142855, 0.5, 0.4444444444444444, 0.5, 0.45454545454545453, 0.5, 0.5, 0.5833333333333334, 0.5, 0.5, 0.5, 0.5, 0.5833333333333334, 0.5833333333333334, 0.6666666666666666, 0.6666666666666666, 0.75, 0.75, 0.75, 0.6666666666666666, 0.75, 0.75, 0.6666666666666666, 0.75, 0.75, 0.75, 0.75, 0.75, 0.75, 0.6666666666666666, 0.6666666666666666, 0.75, 0.6666666666666666, 0.75, 0.8333333333333334, 0.8333333333333334, 0.8333333333333334, 0.8333333333333334, 0.8333333333333334, 0.8333333333333334, 0.8333333333333334, 0.9166666666666666, 0.9166666666666666, 0.9166666666666666, 0.9166666666666666, 0.9166666666666666, 0.8333333333333334, 0.8333333333333334, 0.75, 0.75, 0.75, 0.6666666666666666, 0.6666666666666666, 0.6666666666666666, 0.6666666666666666, 0.5833333333333334, 0.6666666666666666, 0.6666666666666666, 0.6666666666666666, 0.6666666666666666, 0.75, 0.75, 0.6666666666666666, 0.75, 0.6666666666666666, 0.5833333333333334, 0.5833333333333334, 0.5833333333333334, 0.5833333333333334, 0.5833333333333334, 0.5833333333333334, 0.5833333333333334, 0.5, 0.4166666666666667, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5833333333333334, 0.5833333333333334, 0.5833333333333334, 0.6666666666666666, 0.5833333333333334, 0.5833333333333334, 0.6666666666666666, 0.5833333333333334, 0.5833333333333334], "Gradient Boosting": [null, null, null, null, null, null, null, null, null, null, null, null, null, null, 0.8333333333333334, 0.7142857142857143, 0.75, 0.7777777777777778, 0.8, 0.7272727272727273, 0.75, 0.75, 0.6666666666666666, 0.6666666666666666, 0.75, 0.75, 0.6666666666666666, 0.75, 0.75, 0.75, 0.75, 0.8333333333333334, 0.8333333333333334, 0.8333333333333334, 0.8333333333333334, 0.8333333333333334, 0.75, 0.6666666666666666, 0.75, 0.75, 0.75, 0.75, 0.75, 0.75, 0.6666666666666666, 0.6666666666666666, 0.75, 0.75, 0.8333333333333334, 0.9166666666666666, 0.9166666666666666, 0.8333333333333334, 0.8333333333333334, 0.8333333333333334, 0.8333333333333334, 0.8333333333333334, 0.9166666666666666, 0.9166666666666666, 0.8333333333333334, 0.8333333333333334, 0.8333333333333334, 0.75, 0.75, 0.75, 0.75, 0.75, 0.6666666666666666, 0.6666666666666666, 0.6666666666666666, 0.6666666666666666, 0.75, 0.75, 0.6666666666666666, 0.6666666666666666, 0.6666666666666666, 0.75, 0.75, 0.6666666666666666, 0.75, 0.6666666666666666, 0.5833333333333334, 0.5833333333333334, 0.5833333333333334, 0.5833333333333334, 0.6666666666666666, 0.6666666666666666, 0.6666666666666666, 0.5833333333333334, 0.5, 0.5833333333333334, 0.5833333333333334, 0.5833333333333334, 0.5833333333333334, 0.5833333333333334, 0.5833333333333334, 0.5833333333333334, 0.5, 0.5, 0.4166666666666667, 0.4166666666666667, 0.5, 0.4166666666666667, 0.4166666666666667]}, "rolling_acc_dates": ["2017-08", "2017-09", "2017-10", "2017-11", "2017-12", "2018-01", "2018-02", "2018-03", "2018-04", "2018-05", "2018-06", "2018-07", "2018-08", "2018-09", "2018-10", "2018-11", "2018-12", "2019-01", "2019-02", "2019-03", "2019-04", "2019-05", "2019-06", "2019-07", "2019-08", "2019-09", "2019-10", "2019-11", "2019-12", "2020-01", "2020-02", "2020-03", "2020-04", "2020-05", "2020-06", "2020-07", "2020-08", "2020-09", "2020-10", "2020-11", "2020-12", "2021-01", "2021-02", "2021-03", "2021-04", "2021-05", "2021-06", "2021-07", "2021-08", "2021-09", "2021-10", "2021-11", "2021-12", "2022-01", "2022-02", "2022-03", "2022-04", "2022-05", "2022-06", "2022-07", "2022-08", "2022-09", "2022-10", "2022-11", "2022-12", "2023-01", "2023-02", "2023-03", "2023-04", "2023-05", "2023-06", "2023-07", "2023-08", "2023-09", "2023-10", "2023-11", "2023-12", "2024-01", "2024-02", "2024-03", "2024-04", "2024-05", "2024-06", "2024-07", "2024-08", "2024-09", "2024-10", "2024-11", "2024-12", "2025-01", "2025-02", "2025-03", "2025-04", "2025-05", "2025-06", "2025-07", "2025-08", "2025-09", "2025-10", "2025-11", "2025-12", "2026-01", "2026-02"], "mc_paths": [[21316.41, 22098.82, 22330.68, 23291.72, 25167.11, 25333.01, 25500.02, 27615.72, 28943.65, 28859.24, 29973.88, 29893.76, 29811.08], [21316.41, 21872.93, 20575.44, 19502.51, 19372.98, 18897.77, 19447.76, 19051.08, 18286.76, 19713.49, 19850.14, 20225.59, 19404.41], [21316.41, 21190.12, 21628.73, 20980.95, 21645.15, 21468.15, 21559.57, 21382.35, 23412.85, 23777.85, 23152.65, 24319.97, 23525.22], [21316.41, 21843.75, 20509.58, 19753.65, 20232.53, 21180.67, 21671.86, 21919.23, 22004.22, 21065.09, 20792.63, 20739.38, 21992.11], [21316.41, 21962.79, 20785.54, 21398.96, 21409.3, 21169.0, 22047.99, 23355.14, 24640.49, 24204.97, 24290.88, 25014.99, 26438.85], [21316.41, 21245.93, 21427.85, 20823.56, 20163.1, 21171.13, 22722.41, 23022.25, 24360.16, 25117.08, 24867.04, 25639.47, 27720.67], [21316.41, 21629.24, 23410.03, 21402.76, 22481.27, 22924.52, 23015.35, 23473.59, 22015.09, 22173.15, 22857.95, 24653.5, 24533.27], [21316.41, 20965.61, 20877.26, 22012.14, 22666.02, 22545.03, 23388.15, 23858.93, 25209.97, 24901.76, 24971.55, 24976.53, 23925.02], [21316.41, 21920.76, 22510.39, 22878.49, 23028.9, 22102.26, 22081.24, 22129.69, 21770.96, 21978.97, 22700.71, 24890.42, 25470.93], [21316.41, 21886.69, 22173.33, 20853.4, 21167.38, 21561.39, 24197.87, 24398.47, 25095.69, 25465.13, 24684.84, 26266.52, 27512.37], [21316.41, 22362.71, 21905.37, 23554.64, 22619.17, 23534.81, 26123.6, 25505.73, 25332.23, 25844.83, 25734.14, 24564.24, 25029.89], [21316.41, 20752.08, 21493.73, 21045.64, 22764.87, 22413.03, 22480.92, 23605.77, 22825.14, 23407.35, 25072.79, 23878.17, 24444.99], [21316.41, 21888.74, 22954.6, 22190.05, 21378.84, 22186.11, 22815.91, 23419.63, 24132.54, 23858.69, 24472.0, 25162.72, 24842.76], [21316.41, 23353.36, 24188.21, 23425.66, 24442.56, 23879.71, 25047.84, 26669.74, 26217.94, 27696.67, 28616.23, 30058.42, 32971.96], [21316.41, 21447.2, 21140.88, 20725.13, 20378.04, 20642.71, 21266.55, 21852.35, 22958.4, 23341.25, 25150.04, 25284.7, 28672.03], [21316.41, 22214.06, 21805.64, 21221.01, 21987.29, 22141.77, 23156.52, 23983.75, 24299.44, 23862.65, 22810.76, 22765.3, 23945.76], [21316.41, 21848.36, 21113.17, 21604.37, 22296.95, 21863.45, 22354.56, 22768.82, 22094.05, 22777.03, 23674.15, 25130.41, 26644.8], [21316.41, 20489.81, 20047.76, 20798.97, 21577.24, 22385.77, 26571.15, 27628.97, 29390.69, 31036.63, 32377.17, 32484.14, 34034.55], [21316.41, 20995.79, 21131.92, 21056.79, 21467.48, 23948.53, 22569.76, 23577.73, 22449.61, 22381.92, 23764.35, 24210.66, 23555.04], [21316.41, 21044.55, 21978.5, 21685.02, 22228.29, 22628.67, 22397.55, 24814.65, 25868.22, 24224.19, 24801.04, 24537.65, 25805.88], [21316.41, 20979.12, 21219.36, 22005.55, 23155.35, 22417.23, 22473.86, 22403.37, 22173.0, 24193.71, 24989.11, 24133.49, 25447.9], [21316.41, 23596.09, 24996.5, 23890.27, 23806.42, 25458.91, 25141.96, 26009.24, 27267.84, 26691.29, 27057.13, 24124.77, 23522.04], [21316.41, 21440.99, 20717.8, 22484.92, 21567.31, 21529.95, 21993.17, 23685.78, 22713.92, 24189.15, 24589.78, 24016.93, 24863.73], [21316.41, 21835.12, 21656.94, 22068.58, 22079.03, 22538.4, 23522.07, 25480.66, 24631.12, 27277.26, 25619.06, 25873.75, 26922.72], [21316.41, 21907.39, 21708.92, 21874.97, 21790.49, 21622.13, 22737.08, 23439.2, 23161.18, 24404.65, 25107.87, 26363.47, 27478.04], [21316.41, 20948.28, 20810.91, 21793.92, 22697.67, 23044.64, 23527.72, 25171.78, 24975.08, 25944.45, 26149.15, 26339.01, 27976.94], [21316.41, 22393.74, 23514.22, 25185.57, 25613.82, 26753.1, 26846.91, 27639.3, 27938.44, 28500.72, 29664.38, 29164.75, 32245.03], [21316.41, 20799.25, 20124.96, 21427.67, 22480.0, 23425.18, 24414.26, 24796.12, 24300.9, 24768.8, 24490.56, 25884.12, 26146.43], [21316.41, 20951.23, 21015.27, 21713.14, 21567.67, 21200.99, 21756.01, 22326.71, 22227.98, 22161.75, 22731.25, 21787.82, 20917.78], [21316.41, 21041.89, 21198.29, 21812.3, 23523.3, 24744.32, 24982.09, 25365.91, 24753.98, 25134.8, 25244.93, 25988.52, 25541.52], [21316.41, 22119.0, 23909.33, 24188.96, 24980.91, 26100.66, 26096.28, 26758.3, 27204.07, 27752.33, 27334.7, 27803.43, 28825.44], [21316.41, 22966.07, 24257.38, 26885.2, 26486.67, 27877.99, 28538.27, 31676.6, 31155.54, 30604.24, 30355.51, 28313.31, 28166.73], [21316.41, 21007.39, 21476.38, 22125.95, 24250.42, 25604.8, 25419.75, 24910.91, 25820.26, 24876.57, 27216.02, 29002.68, 28918.44], [21316.41, 20214.45, 21693.56, 21942.16, 23437.72, 22332.76, 22151.27, 22513.61, 22920.43, 22871.48, 23831.9, 23196.01, 23435.5], [21316.41, 21765.86, 22580.91, 23613.52, 22930.66, 21902.82, 23433.35, 24132.92, 23793.28, 25738.23, 26276.02, 28000.81, 28530.41], [21316.41, 23537.72, 25672.33, 25826.12, 27291.77, 28463.66, 30564.56, 29872.49, 31206.34, 33093.04, 31324.61, 30346.93, 28402.12], [21316.41, 21426.44, 22411.61, 24195.96, 24660.13, 26759.41, 25719.22, 24399.25, 24737.64, 25529.38, 25907.31, 24219.44, 24522.11], [21316.41, 20550.39, 21453.82, 22124.87, 21645.75, 21544.01, 20976.27, 21261.07, 22452.77, 21925.97, 22737.48, 22615.66, 22257.49], [21316.41, 21567.22, 21019.18, 20886.85, 20223.02, 22244.08, 22635.33, 22360.7, 22918.6, 23183.3, 23348.53, 24320.47, 25479.74], [21316.41, 21201.99, 21049.68, 21153.51, 19589.22, 18725.44, 20106.14, 21832.14, 21962.86, 22842.44, 23504.39, 27041.62, 28747.34], [21316.41, 21549.06, 21069.1, 20066.08, 20558.01, 20262.25, 19441.53, 19246.86, 18722.79, 20364.65, 21442.45, 21781.59, 23494.53], [21316.41, 21728.21, 21325.18, 23042.32, 23928.77, 23318.84, 23514.07, 23064.57, 22165.59, 23380.66, 25659.99, 24644.17, 25617.09], [21316.41, 21099.51, 21023.0, 20858.03, 20468.9, 20840.07, 20478.55, 21037.36, 21333.69, 21470.16, 21032.62, 20880.72, 21874.17], [21316.41, 22102.57, 21591.1, 22027.71, 23072.0, 21917.9, 22765.18, 22522.65, 23419.02, 23075.67, 21801.94, 20746.37, 21122.2], [21316.41, 21888.6, 21445.34, 22360.07, 21248.34, 21533.88, 20838.44, 20625.41, 20998.47, 20609.7, 20620.09, 21820.83, 21663.13], [21316.41, 22403.02, 21750.72, 22579.19, 24317.19, 22365.33, 22007.56, 22889.41, 23069.22, 23795.16, 23597.4, 24062.21, 24297.6], [21316.41, 22705.1, 23309.59, 24010.59, 23996.24, 23908.76, 23874.55, 24648.99, 24625.21, 25316.89, 27971.6, 29439.5, 29523.96], [21316.41, 22735.74, 22725.64, 21270.2, 20752.43, 19554.89, 19590.84, 19921.88, 21659.54, 22301.31, 22461.95, 23600.97, 21935.87], [21316.41, 21867.33, 22922.02, 21943.66, 23350.57, 24053.67, 24035.99, 25055.35, 27901.54, 28560.67, 29313.72, 29240.15, 28711.02], [21316.41, 22398.18, 21987.33, 22406.85, 22334.13, 23137.34, 23829.37, 25248.79, 25134.02, 25263.27, 24677.46, 24630.49, 25411.86], [21316.41, 22332.02, 21864.03, 23010.01, 24695.43, 25516.02, 27966.7, 27544.98, 26619.27, 25176.49, 27174.05, 28351.16, 28744.32], [21316.41, 21906.48, 21272.25, 23856.54, 24368.32, 24871.18, 26023.37, 26961.47, 27645.21, 27210.02, 28180.05, 30893.11, 33142.29], [21316.41, 23098.02, 22991.92, 22448.96, 22695.92, 23114.19, 24547.04, 23297.48, 25179.96, 25423.9, 25393.34, 24771.18, 23545.9], [21316.41, 22391.71, 22820.56, 22013.36, 21230.33, 21282.86, 23132.31, 23260.92, 22246.05, 22382.23, 22494.75, 20502.07, 20787.46], [21316.41, 21459.71, 22427.1, 24553.52, 26109.66, 26244.97, 25504.64, 28750.7, 29284.68, 29774.14, 30225.35, 30959.63, 31276.77], [21316.41, 21165.12, 21037.63, 21349.02, 21223.36, 20954.77, 21384.64, 21507.53, 23221.43, 21203.61, 22515.58, 24058.25, 22485.46], [21316.41, 21363.2, 21385.28, 20531.28, 20218.4, 19644.86, 21423.78, 22606.85, 24180.6, 25296.62, 24560.72, 24434.78, 25324.15], [21316.41, 20618.75, 21562.83, 21699.56, 21719.03, 22711.62, 23495.49, 23529.71, 25054.05, 24372.33, 25388.7, 26423.1, 26516.52], [21316.41, 21947.31, 21204.2, 22364.63, 22556.81, 22442.77, 23790.6, 23497.57, 22558.35, 21527.64, 22416.4, 21631.81, 23593.06], [21316.41, 19916.0, 21670.63, 22208.66, 22479.32, 22345.66, 23074.86, 23411.79, 24872.22, 25390.43, 25957.18, 25992.22, 26351.22], [21316.41, 21931.09, 20799.84, 20017.06, 20959.16, 21444.77, 21629.85, 21995.36, 22665.95, 22535.87, 22192.0, 22729.07, 22202.38], [21316.41, 22020.12, 20890.67, 22127.56, 22917.44, 23529.11, 24875.56, 27033.34, 28616.86, 26998.05, 26054.0, 25815.76, 26260.12], [21316.41, 22117.5, 21826.23, 22346.26, 22025.64, 21835.95, 20964.67, 20524.45, 19749.24, 19293.54, 20456.06, 20005.4, 22605.3], [21316.41, 22095.8, 22620.49, 22203.53, 23208.3, 23041.74, 23529.2, 26509.64, 26833.42, 28560.2, 28209.75, 28624.71, 31240.13], [21316.41, 21119.66, 23088.1, 24140.14, 23979.63, 24996.22, 26415.82, 27523.92, 26251.93, 25904.76, 26061.47, 26402.79, 27509.08], [21316.41, 21816.31, 21006.15, 21675.08, 22574.09, 23462.28, 24903.23, 26170.81, 27090.36, 27449.88, 26085.68, 26970.07, 27635.96], [21316.41, 21899.07, 21135.73, 20560.63, 21799.07, 22115.66, 23098.92, 23498.62, 23906.63, 25229.46, 25108.67, 25613.1, 25545.82], [21316.41, 21284.25, 21359.83, 21899.96, 21827.92, 23332.57, 22869.02, 23063.71, 23024.05, 24801.7, 25402.65, 26909.61, 25753.8], [21316.41, 21895.07, 23061.29, 23511.46, 24940.04, 24819.39, 26695.11, 29761.41, 29802.51, 29744.33, 32049.12, 34708.7, 34533.04], [21316.41, 21296.53, 21395.77, 20593.66, 20164.96, 19677.22, 19385.18, 19670.57, 20177.82, 21826.66, 21303.7, 22524.28, 22691.2], [21316.41, 21617.35, 22572.37, 21921.31, 22621.4, 23141.41, 23986.69, 24659.83, 27666.32, 27399.06, 27251.45, 27004.09, 26832.1], [21316.41, 21110.79, 22505.35, 24217.08, 24048.03, 23629.52, 24471.85, 24319.18, 25350.7, 25971.62, 24825.86, 26851.27, 29334.3], [21316.41, 21131.74, 21139.71, 21730.06, 22380.71, 23354.12, 25735.26, 25964.74, 25547.94, 24555.61, 24227.17, 24585.39, 26857.46], [21316.41, 21213.02, 21750.89, 22087.38, 23545.86, 26492.96, 26350.37, 26252.37, 27823.55, 29061.04, 31813.57, 33097.49, 33147.94], [21316.41, 22182.71, 23571.61, 24757.99, 25677.66, 27239.17, 29015.48, 31174.11, 32517.08, 32820.04, 33547.77, 35789.15, 35188.18], [21316.41, 21985.0, 21988.3, 22369.17, 23933.03, 24507.54, 24949.84, 23999.58, 25132.15, 26211.42, 29062.73, 29167.56, 29901.53], [21316.41, 21879.48, 23693.11, 23983.23, 24646.18, 25665.64, 26276.98, 26224.7, 26857.46, 28498.71, 27784.32, 28384.65, 28039.81], [21316.41, 22730.08, 21720.8, 21579.46, 22263.96, 24097.86, 24422.02, 24266.75, 26602.12, 25498.1, 23710.94, 24525.1, 24421.46], [21316.41, 20786.49, 21734.18, 22303.26, 22153.52, 21378.24, 22501.34, 23472.1, 23755.79, 26005.76, 25309.35, 24183.27, 23897.39], [21316.41, 21620.73, 22186.43, 22326.3, 23011.13, 22231.61, 23944.97, 24251.02, 25778.35, 26559.08, 27489.58, 28582.67, 29573.28]], "last_close": 21316.41, "prob_evolution": {"Logistic Regression": [null, null, null, null, null, null, null, null, null, null, null, null, 0.4854233267315062, 0.4982412739901475, 0.41720146187811175, 0.41944130414214914, 0.48031463822011494, 0.4331622717198325, 0.4873099290253718, 0.48786572288679825, 0.5263460268611609, 0.5217740105941402, 0.5177095167922835, 0.48534560194347726, 0.46406484267355047, 0.4469428747702016, 0.5013756153219976, 0.5448753480671339, 0.5260744198571029, 0.5801739612790402, 0.5013620400959303, 0.4741402030206269, 0.4746404584028115, 0.41119048012193354, 0.47007198465467886, 0.5269256500087095, 0.5210053208206349, 0.5051197733361106, 0.46184400900473066, 0.46042004831774713, 0.46388629100236684, 0.4530797299422955, 0.4625931005865738, 0.521345906356041, 0.5013801804858692, 0.5675796411883547, 0.5788955123065864, 0.5329146555777907, 0.535254406285021, 0.5680930319990342, 0.5661261060475798, 0.5352234751192045, 0.548531230190354, 0.5602044556982548, 0.5765305349298436, 0.5759614827898073, 0.5335410126033403, 0.5406317978204093, 0.4812856742924522, 0.5065324513680158, 0.5680678388516743, 0.5669095035623216, 0.6388653933177163, 0.613987912367178, 0.5854612566369499, 0.5407296172280894, 0.5698208164075913, 0.5703103838255829, 0.617855069453009, 0.5704269377590362, 0.6063734928726939, 0.6408411217561207, 0.6101610258821514, 0.6135202489142039, 0.566466437073304, 0.6214437946302275, 0.6439774712874357, 0.693122375592152, 0.7172323145808092, 0.6827864902091775, 0.6661588064142178, 0.6908321321547864, 0.699811543558828, 0.6979856621968624, 0.7225852782986492, 0.7332807963999439, 0.7639246247314322, 0.732071386574341, 0.6917550736190549, 0.6325625722915676, 0.5996816479188148, 0.619845977090704, 0.6278856859304888, 0.6502175082856806, 0.6522473295069399, 0.6415452407873447, 0.5895772151021508, 0.5537933294984807, 0.5556177193978492, 0.5625760261778064, 0.6170717073942011, 0.6371970638989275, 0.6539719652041437], "Random Forest": [null, null, null, null, null, null, null, null, null, null, null, null, 0.5118358585858587, 0.5127015151515153, 0.5119288720538722, 0.5118279220779222, 0.5132992424242425, 0.5126167227833895, 0.5137148989898991, 0.5133376951331498, 0.5139065656565657, 0.5136982323232324, 0.5136982323232323, 0.5137739898989899, 0.5134877946127947, 0.5134802188552189, 0.5137453703703705, 0.5146517255892257, 0.5312014403649808, 0.5415591683725125, 0.5253290334471199, 0.5147414980092128, 0.538703858238644, 0.5134297920461125, 0.5293137264357198, 0.546417291905117, 0.54094399867508, 0.5270614230835569, 0.5037046423922292, 0.5245851933109298, 0.5166680041617057, 0.5082598927199212, 0.5103396730897396, 0.5435734966743041, 0.5351732467622509, 0.5794178865897108, 0.5864603598182628, 0.5591780983554534, 0.5477582386366385, 0.5689029960886366, 0.5768700686682053, 0.5526763589631513, 0.5650618960217423, 0.5759254894977986, 0.5850696074979013, 0.590665374236139, 0.5630477322090296, 0.5698497230216536, 0.5431089943071139, 0.5611882127343302, 0.5926795607597187, 0.597218742948312, 0.6428753254022227, 0.6306692528880053, 0.6105881117821025, 0.578983741381975, 0.60740309997013, 0.6097928889701211, 0.6259438386388373, 0.5800010800215804, 0.5838013418661488, 0.6074723116492328, 0.5886232614520487, 0.574023919981907, 0.5277382845163099, 0.5701855757717114, 0.5947691837529975, 0.6228962899024703, 0.6310399840288005, 0.5966418160062793, 0.5906603445860193, 0.6131051740230954, 0.6163304837064232, 0.6175118769766805, 0.6286119288680153, 0.6395529121105695, 0.6765687386903475, 0.6410562153343443, 0.6089958378576031, 0.5699500976830691, 0.5499824875014149, 0.574038582288169, 0.5812038625762153, 0.6104439842908813, 0.6250081991774229, 0.6063969822150804, 0.5829702734854004, 0.5919012047574678, 0.5938580537319621, 0.6059813440007775, 0.6454939122107092, 0.6779523432830805, 0.6856977085938007], "Gradient Boosting": [null, null, null, null, null, null, null, null, null, null, null, null, 0.7498641412524532, 0.7998369695029438, 0.6665760941683021, 0.714169263930674, 0.7498641412524532, 0.6665760941683021, 0.6998913130019625, 0.7271492193204119, 0.749864141252453, 0.749864141252453, 0.749864141252453, 0.6665760941683021, 0.5832880470841512, 0.5832880470841512, 0.6665760941683021, 0.666576094168302, 0.6665766604381866, 0.7498652737922225, 0.6665777918282446, 0.5832903098642669, 0.5832908761341515, 0.5000033941701738, 0.5832920075242095, 0.6665806208782453, 0.6665811859984184, 0.5832937040344408, 0.500006222070463, 0.5000067883403476, 0.5000067883403477, 0.5000067883403477, 0.5000067883403477, 0.5832948365742101, 0.5832948365742101, 0.6665828848080725, 0.6665828848080725, 0.6312320945892633, 0.6320827236717, 0.7134593973961736, 0.7154974316608124, 0.7090928402402111, 0.7081014206663853, 0.7002184860975418, 0.7244574789593613, 0.7241712430423566, 0.6431779940125516, 0.6428105339880571, 0.6261246928929646, 0.5882188629542565, 0.6437915434958896, 0.6393206742903133, 0.7200933710424148, 0.6448979626821586, 0.6142745963819709, 0.5463020505748354, 0.6042330996630428, 0.6031724980734697, 0.6795266874448802, 0.5980840413918445, 0.568546070332571, 0.6409867010539364, 0.6624867705049966, 0.5970512801059047, 0.5167472030110237, 0.5979780035070899, 0.6270761100618382, 0.7015385188603854, 0.7016250825916175, 0.6250140739543776, 0.5497539408422176, 0.6205108154430475, 0.5874502994399283, 0.5832783657719695, 0.5876184652998414, 0.6469479062191346, 0.7254964353969214, 0.646771716439775, 0.5888386320189565, 0.5094476569430283, 0.4881902757215917, 0.5650048626765608, 0.6404375035093448, 0.6509380528498533, 0.726477103794073, 0.7153763133777874, 0.699657364479464, 0.6489510687811845, 0.6475055408157092, 0.7210481000366596, 0.7810229306850093, 0.8560950659830673, 0.875602858636117]}, "prob_dates": ["2017-08", "2017-09", "2017-10", "2017-11", "2017-12", "2018-01", "2018-02", "2018-03", "2018-04", "2018-05", "2018-06", "2018-07", "2018-08", "2018-09", "2018-10", "2018-11", "2018-12", "2019-01", "2019-02", "2019-03", "2019-04", "2019-05", "2019-06", "2019-07", "2019-08", "2019-09", "2019-10", "2019-11", "2019-12", "2020-01", "2020-02", "2020-03", "2020-04", "2020-05", "2020-06", "2020-07", "2020-08", "2020-09", "2020-10", "2020-11", "2020-12", "2021-01", "2021-02", "2021-03", "2021-04", "2021-05", "2021-06", "2021-07", "2021-08", "2021-09", "2021-10", "2021-11", "2021-12", "2022-01", "2022-02", "2022-03", "2022-04", "2022-05", "2022-06", "2022-07", "2022-08", "2022-09", "2022-10", "2022-11", "2022-12", "2023-01", "2023-02", "2023-03", "2023-04", "2023-05", "2023-06", "2023-07", "2023-08", "2023-09", "2023-10", "2023-11", "2023-12", "2024-01", "2024-02", "2024-03", "2024-04", "2024-05", "2024-06", "2024-07", "2024-08", "2024-09", "2024-10", "2024-11", "2024-12", "2025-01", "2025-02", "2025-03", "2025-04", "2025-05", "2025-06", "2025-07", "2025-08", "2025-09", "2025-10", "2025-11", "2025-12", "2026-01", "2026-02"], "scatter_lr": [0.9332416015930151, 0.09578394891778061, 0.4888551682994545, 0.4238125881157744, 0.5495130630247127, 0.012002401317932985, 0.4328803577263731, 0.9064279767658762, 0.05594333971757305, 0.9746388447752246, 0.493423661501063, 0.9496293705791499, 0.8783774063887673, 0.04701002329550092, 0.10048819011377891, 0.16844347687665187, 0.3440494481845278, 0.665195287939484, 0.9548771506680089, 0.6808168382455039, 0.7051378367808205, 0.028895790577906814, 0.16676161659742192, 0.9556324351653657, 0.11697766701823135, 0.7535880776884452, 0.7827321743621465, 0.09739952661975684, 0.15342287837023624, 0.14588611596292447, 0.9377896224242056, 0.7224117504609402, 0.5754591040599653, 0.14305623830924546, 0.8717952858310284, 0.7160437247233036, 0.9113711954480574, 0.8893785311072263, 0.2309618936165982, 0.12547653510652038, 0.5474863869383942, 0.12228300454547297, 0.5669580512837017, 0.8821048113147344, 0.7155378101547758, 0.3389691890883116, 0.8649666601505909, 0.20699808248569973, 0.9964606180528847, 0.17722504877174333, 0.5339232185233608, 0.8639011849104221, 0.5335863634661612, 0.985753681610209, 0.2684282798772413, 0.5397849425519988, 0.17875813724845022, 0.6880635792423329, 0.8708414691664896, 0.7775343100148152, 0.4273230377252109, 0.6085837101356368, 0.9475347651244815, 0.49574003442278897, 0.5738970398507913, 0.42110793951941067, 0.9281565705603223, 0.8101890624384976, 0.7684969889050471, 0.9773828471062178, 0.4574915767069098, 0.5780021044752971, 0.7234029466120351, 0.7163366469841357, 0.9256241887808958, 0.7909354276442312, 0.7022432570663265, 0.7888338794972702, 0.5459177126752291, 0.32639330697506325, 0.05818697297520014, 0.5828117546331826, 0.6994635267695817, 0.6744786105527146, 0.9913848148743367, 0.7406945016392467, 0.7971991241457527, 0.16731911942190494, 0.2728366298222858, 0.8107265582896921, 0.6294173940347156, 0.9803414815718007, 0.29969125103191585, 0.7841105702957769, 0.5429034942926702], "scatter_rf": [0.5210732323232324, 0.5046313131313132, 0.5135732323232325, 0.5080656565656566, 0.5161641414141416, 0.5080656565656566, 0.5112222222222224, 0.5235984848484849, 0.5071565656565657, 0.5235984848484849, 0.5095656565656566, 0.5201641414141416, 0.5185732323232324, 0.5046313131313132, 0.5144823232323233, 0.5046313131313132, 0.5160732323232324, 0.5112474747474748, 0.522098484848485, 0.7221950621575466, 0.6314493017469459, 0.3288368657437748, 0.3825152313107692, 0.8077124641673161, 0.21528443801285532, 0.6952385258066017, 0.7197251088650899, 0.43895179437087023, 0.3494823252249541, 0.23096610645154192, 0.7726650958728924, 0.6271887923668557, 0.530551964445532, 0.3537942301815958, 0.781321114325544, 0.7069094652226765, 0.7462201159423745, 0.7797482045492251, 0.3923379713113796, 0.30191347774509053, 0.6032194146489307, 0.3265709774063676, 0.482340579412243, 0.7758152370699486, 0.6609150861582076, 0.463523646182828, 0.8484703151843966, 0.37549776089736375, 0.8278440056938625, 0.4588594599747479, 0.6092885924379765, 0.6798096540497535, 0.6576896009120481, 0.8744499668532967, 0.3358677092416342, 0.5348415437991139, 0.28166264135667674, 0.8045559492406886, 0.8771477831842909, 0.5693091569219583, 0.2765309022867797, 0.5044626021095685, 0.8933402298349842, 0.45362105168354355, 0.48249750327034974, 0.3190223412661308, 0.8452352043064526, 0.8298448395745452, 0.6191879151503514, 0.9022802787566505, 0.4643697669140363, 0.49753149987883993, 0.5458688555316925, 0.5431663183095007, 0.9075169490780733, 0.586821674379561, 0.6137893021810011, 0.7632122602234668, 0.4190849240344142, 0.4451203098536506, 0.15063903305594248, 0.6626689565767998, 0.7530429043550843, 0.5835148633353966, 0.8967503161076852, 0.7179368969479992, 0.6841823455299629, 0.3057011696234031, 0.7209604774458076, 0.7866944479173997, 0.5645644072601977, 0.9192711283728312, 0.5401402059243985, 0.7556133403054424, 0.5918448039089187], "scatter_gb": [0.9997282825049062, 0.00027171749509379586, 0.9997282825049062, 0.9997282825049062, 0.9997282825049062, 0.00027171749509379586, 0.9997282825049062, 0.9997282825049062, 0.00027171749509379586, 0.9997282825049062, 0.9997282825049062, 0.9997282825049062, 0.9997282825049062, 0.00027171749509379586, 0.00027171749509379586, 0.00027171749509379586, 0.9997282825049062, 0.9997282825049062, 0.9997282825049062, 0.9997350777435221, 0.9997350777435221, 0.00027849893717333694, 0.00027849893717333694, 0.9997350777435221, 0.00027849893717333694, 0.9997350777435221, 0.9997350777435221, 0.00027849893717333694, 0.00027849893717333694, 0.00027849893717333694, 0.9997350777435221, 0.9997350777435221, 0.9997350777435221, 0.00027849893717333694, 0.9997350777435221, 0.9997350777435221, 0.9997350777435221, 0.9997350777435221, 0.5755255951178119, 0.010486047926414964, 0.9767985836308547, 0.024734910112838692, 0.9228799806963071, 0.9878380428576113, 0.9051398629174001, 0.29114641327900936, 0.9963002467394642, 0.027816089385862722, 0.9953255574495877, 0.7995049846024107, 0.120655635853315, 0.677358214426013, 0.9231481531639397, 0.9940072711380563, 0.020535080373232144, 0.6203576472553609, 0.0894693132317742, 0.9863190023374977, 0.9835730276645879, 0.9440663618427864, 0.01801380481315962, 0.4450493318911291, 0.9899432045097003, 0.935359047838736, 0.13792226837483676, 0.030358345999484247, 0.9953046863260264, 0.9695349259123414, 0.9830182188143405, 0.9873577671122827, 0.06424092401770873, 0.040944764496866404, 0.8670963000231184, 0.0483231398536995, 0.9398800004941933, 0.9874402421731974, 0.8498755594063558, 0.9729406961329266, 0.050608058840269685, 0.2743379128625183, 0.03032651790320222, 0.7322691924550435, 0.9860159674773379, 0.9461364544902756, 0.9931028921092199, 0.9547917511843376, 0.806670515498764, 0.7988128553933161, 0.2414000110270009, 0.9555943605472245, 0.9331187694916757, 0.9940358806427132, 0.9311921414798988, 0.9663627042916385, 0.9527123405541268], "scatter_actual": [1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0, 1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1, 0, 1, 0, 0, 1, 0, 1, 0], "corr_matrix": [[1.0, -0.475, -0.048, 0.019, 0.037, 0.041, -0.083, -0.003, -0.032, 0.062, -0.1, -0.128, -0.074], [-0.475, 1.0, -0.484, -0.328, -0.043, 0.489, 0.028, -0.045, -0.118, -0.017, 0.03, -0.444, 0.037], [-0.048, -0.484, 1.0, 0.082, 0.092, -0.446, 0.025, 0.064, 0.057, 0.063, 0.098, 0.458, 0.002], [0.019, -0.328, 0.082, 1.0, 0.892, 0.55, 0.608, 0.032, 0.107, 0.036, 0.046, 0.112, 0.471], [0.037, -0.043, 0.092, 0.892, 1.0, 0.755, 0.674, 0.04, 0.07, 0.052, 0.064, -0.016, 0.522], [0.041, 0.489, -0.446, 0.55, 0.755, 1.0, 0.517, -0.016, -0.042, 0.044, 0.021, -0.419, 0.41], [-0.083, 0.028, 0.025, 0.608, 0.674, 0.517, 1.0, 0.158, 0.062, 0.07, 0.063, 0.56, 0.783], [-0.003, -0.045, 0.064, 0.032, 0.04, -0.016, 0.158, 1.0, 0.317, -0.124, 0.014, 0.184, -0.296], [-0.032, -0.118, 0.057, 0.107, 0.07, -0.042, 0.062, 0.317, 1.0, -0.175, -0.107, 0.106, -0.227], [0.062, -0.017, 0.063, 0.036, 0.052, 0.044, 0.07, -0.124, -0.175, 1.0, 0.25, 0.032, 0.107], [-0.1, 0.03, 0.098, 0.046, 0.064, 0.021, 0.063, 0.014, -0.107, 0.25, 1.0, 0.046, 0.017], [-0.128, -0.444, 0.458, 0.112, -0.016, -0.419, 0.56, 0.184, 0.106, 0.032, 0.046, 1.0, 0.434], [-0.074, 0.037, 0.002, 0.471, 0.522, 0.41, 0.783, -0.296, -0.227, 0.107, 0.017, 0.434, 1.0]], "avg_cv_acc": {"Logistic Regression": 72.6, "Random Forest": 65.3, "Gradient Boosting": 68.4}, "live": {"live_date": "April 25, 2026", "live_nifty": 24328.0, "live_vix": 15.4, "blended_vol": 3.95, "live_log_ret": 1.92, "live_probas": {"Logistic Regression": 21.8, "Random Forest": 33.9, "Gradient Boosting": 21.7}, "live_down": {"Logistic Regression": 78.2, "Random Forest": 66.1, "Gradient Boosting": 78.3}, "ensemble_up": 25.8, "ensemble_down": 74.2, "expected_move": 1.32, "confidence": 48.4, "delta_from_prev": 17.37, "live_features": {"Lag-1 Return": 0.0041, "Lag-2 Return": -0.0012, "Lag-3 Return": 0.0128, "Dev from 3M MA": 0.0372, "Dev from 6M MA": 0.0412, "3M Momentum": 0.0548, "6M Momentum": 0.0978, "3M Volatility": 0.0395, "H-L Spread": 0.0964, "Volume Change": -0.0842, "Vol Change 3M": -0.2891, "Regime": 0.0214, "RSI-6M": 63.4}, "mc_paths_live": [[24328.0, 24336.93, 24752.79, 26277.79, 29260.12, 29604.95, 29953.88, 33455.73, 35749.51, 35709.8, 37693.23, 37663.8, 37629.65], [24328.0, 24001.3, 22160.11, 20671.32, 20544.16, 19922.44, 20768.9, 20255.77, 19219.67, 21334.12, 21595.4, 22212.19, 21061.72], [24328.0, 22994.24, 23707.0, 22817.07, 23866.33, 23669.98, 23873.93, 23676.14, 26840.63, 27485.57, 26588.66, 28497.1, 27323.12], [24328.0, 23958.04, 22064.3, 21031.91, 21785.66, 23242.59, 24042.13, 24483.12, 24681.42, 23334.56, 22992.69, 22978.22, 24944.45], [24328.0, 24134.67, 22466.49, 23433.6, 23515.5, 23225.26, 24607.8, 26675.46, 28760.1, 28154.94, 28370.43, 29603.27, 31993.81], [24328.0, 23076.12, 23409.88, 22586.02, 21684.66, 23228.42, 25630.58, 26162.86, 28318.75, 29598.31, 29283.71, 30606.47, 34107.97], [24328.0, 23640.6, 26383.41, 23439.24, 25120.75, 25865.74, 26078.22, 26858.5, 24697.91, 25008.71, 26132.26, 29026.57, 28917.31], [24328.0, 22665.57, 22600.59, 24345.7, 25400.17, 25288.72, 26650.75, 27456.12, 29662.12, 29255.91, 29450.2, 29541.82, 27952.59], [24328.0, 24072.26, 25022.38, 25649.64, 25951.31, 24619.76, 24657.96, 24801.35, 24328.43, 24713.11, 25889.54, 29404.17, 30420.99], [24328.0, 24021.71, 24517.32, 22629.77, 23157.09, 23809.01, 27905.32, 28298.58, 29480.51, 30153.99, 28994.09, 31622.48, 33762.03], [24328.0, 24730.52, 24117.72, 26679.47, 25329.22, 26800.72, 30948.12, 30048.04, 29856.67, 30763.24, 30672.17, 28884.59, 29711.25], [24328.0, 22354.14, 23507.22, 22912.19, 25550.0, 25088.81, 25263.14, 27063.12, 25934.05, 26908.33, 29611.69, 27799.67, 28776.78], [24328.0, 24024.76, 25692.08, 24612.04, 23470.32, 24746.11, 25773.25, 26775.08, 27961.73, 27611.94, 28656.74, 29839.84, 29411.47], [24328.0, 26222.64, 27575.62, 26482.22, 28127.36, 27332.93, 29238.22, 31916.17, 31276.18, 33779.4, 35404.26, 37944.45, 43120.51], [24328.0, 23372.08, 22987.15, 22441.85, 21997.69, 22448.3, 23436.42, 24382.21, 26138.89, 26805.66, 29735.04, 30035.49, 35699.55], [24328.0, 24508.6, 23969.45, 23170.62, 24377.61, 24679.28, 26294.63, 27650.43, 28223.4, 27618.12, 26059.35, 26063.01, 27985.32], [24328.0, 23964.87, 22946.45, 23738.15, 24842.79, 24260.95, 25071.4, 25774.38, 24817.7, 25933.63, 27401.27, 29788.05, 32331.14], [24328.0, 21973.14, 21395.47, 22549.98, 23765.17, 25047.57, 31666.9, 33477.44, 36497.81, 39398.81, 41834.59, 42140.87, 45009.34], [24328.0, 22709.68, 22973.98, 22928.6, 23601.92, 27439.45, 25398.14, 27019.65, 25359.01, 25327.45, 27542.45, 28324.08, 27369.9], [24328.0, 22781.0, 24226.63, 23858.0, 24739.45, 25415.61, 25136.59, 28952.96, 30713.67, 28185.17, 29178.72, 28842.37, 30962.98], [24328.0, 22685.31, 23102.56, 24335.85, 26144.1, 25095.15, 25252.39, 25216.82, 24937.63, 28137.24, 29478.17, 28202.16, 30383.87], [24328.0, 26591.69, 28828.35, 27194.57, 27142.52, 29803.98, 29386.83, 30852.56, 32980.8, 32132.82, 32822.47, 28188.38, 27318.11], [24328.0, 23362.94, 22367.6, 25055.1, 23750.4, 23762.11, 24525.15, 27187.14, 25763.39, 28130.08, 28843.29, 28018.21, 29445.01], [24328.0, 23945.24, 23748.79, 24430.12, 24515.2, 25278.68, 26857.22, 30008.17, 28745.34, 33089.93, 30486.97, 30985.07, 32787.76], [24328.0, 24052.42, 23825.87, 24140.89, 24083.17, 23899.72, 25652.97, 26805.33, 26451.42, 28469.34, 29667.7, 31780.37, 33705.14], [24328.0, 22640.25, 22503.56, 24020.06, 25448.1, 26049.06, 26865.89, 29517.52, 29289.15, 30923.61, 31342.61, 31740.47, 34534.81], [24328.0, 24776.92, 26542.25, 29206.18, 29964.26, 31869.81, 32111.89, 33494.36, 34081.78, 35111.56, 37168.18, 36427.77, 41840.68], [24328.0, 22422.84, 21506.9, 23476.11, 25118.82, 26632.14, 28243.13, 28923.74, 28225.7, 29044.97, 28686.11, 31001.87, 31516.51], [24328.0, 22644.57, 22802.75, 23899.81, 23750.93, 23272.72, 24168.39, 25100.28, 25021.25, 24991.33, 25936.68, 24562.04, 23311.82], [24328.0, 22777.1, 23071.56, 24047.44, 26707.15, 28678.94, 29134.55, 29825.64, 28939.28, 29626.55, 29886.77, 31170.98, 30535.03], [24328.0, 24366.97, 27146.8, 27655.11, 28967.9, 30823.85, 30904.38, 32059.5, 32876.56, 33871.18, 33278.36, 34148.67, 35957.94], [24328.0, 25636.61, 27682.27, 31901.2, 31352.53, 33694.21, 34876.05, 40271.66, 39490.78, 38658.76, 38343.31, 34997.8, 34851.84], [24328.0, 22726.64, 23481.57, 24515.98, 27828.94, 30035.04, 29826.5, 29104.83, 30636.71, 29215.88, 33083.23, 36154.4, 36114.83], [24328.0, 21574.98, 23803.08, 24241.15, 26575.93, 24967.44, 24763.74, 25384.69, 26080.48, 26079.09, 27648.35, 26731.68, 27182.36], [24328.0, 23842.65, 25128.4, 26769.67, 25801.81, 24320.0, 26720.37, 27883.11, 27431.74, 30591.9, 31548.34, 34476.76, 35461.45], [24328.0, 26502.83, 29886.79, 30214.61, 32647.45, 34654.47, 38264.09, 37203.15, 39577.89, 42967.59, 40007.07, 38437.6, 35246.15], [24328.0, 23341.5, 24874.09, 27665.92, 28466.28, 31879.95, 30302.41, 28299.8, 28913.45, 30256.85, 30951.47, 28337.98, 28899.52], [24328.0, 22060.99, 23448.24, 24514.36, 23867.21, 23783.08, 23005.1, 23494.81, 25363.85, 24632.64, 25946.28, 25831.73, 25352.15], [24328.0, 23549.02, 22808.48, 22678.85, 21771.8, 24833.52, 25497.92, 25151.93, 26077.66, 26560.79, 26893.13, 28497.88, 30435.27], [24328.0, 23011.65, 22853.23, 23071.07, 20854.72, 19677.31, 21724.82, 24351.75, 24618.76, 26034.36, 27136.07, 32890.24, 35826.39], [24328.0, 23522.23, 22881.73, 21482.75, 22260.67, 21890.93, 20759.93, 20537.65, 19841.66, 22292.07, 23969.21, 24552.55, 27274.95], [24328.0, 23786.92, 23258.41, 25898.2, 27331.23, 26468.86, 26844.84, 26227.89, 24926.37, 26866.84, 30552.81, 29011.72, 30657.21], [24328.0, 22861.44, 22814.09, 22636.57, 22130.35, 22738.85, 22270.42, 23161.29, 23670.37, 23943.07, 23352.1, 23190.13, 24763.82], [24328.0, 24342.5, 23651.27, 24368.99, 26017.0, 24342.65, 25695.84, 25398.48, 26850.2, 26394.29, 24513.95, 22988.73, 23620.27], [24328.0, 24024.55, 23435.72, 24867.25, 23276.89, 23767.97, 22801.03, 22550.42, 23169.05, 22655.34, 22735.18, 24612.32, 24441.45], [24328.0, 24790.8, 23887.89, 25197.17, 27932.55, 25016.65, 24546.82, 25959.02, 26309.53, 27512.56, 27281.23, 28089.59, 28542.47], [24328.0, 25243.66, 26230.52, 27379.83, 27435.42, 27377.88, 27402.56, 28692.0, 28735.99, 29916.98, 34330.63, 36892.33, 37140.65], [24328.0, 25289.71, 25346.31, 23243.22, 22545.65, 20864.39, 20975.66, 21517.08, 24160.3, 25204.23, 25522.2, 27364.33, 24858.26], [24328.0, 23993.0, 25642.79, 24243.38, 26442.45, 27602.39, 27653.29, 29333.15, 34020.91, 35211.37, 36575.54, 36555.06, 35765.16], [24328.0, 24783.57, 24239.79, 24937.6, 24898.79, 26190.82, 27332.52, 29639.69, 29541.41, 29831.42, 28982.41, 28989.99, 30325.76], [24328.0, 24684.67, 24056.25, 25849.15, 28521.4, 29894.41, 33935.34, 33339.98, 31925.03, 29693.0, 33014.33, 35061.08, 35821.27], [24328.0, 24051.08, 23180.44, 27142.71, 28011.99, 28877.88, 30787.79, 32388.99, 33599.22, 32979.75, 34676.91, 39375.53, 43421.92], [24328.0, 25835.88, 25748.53, 25000.94, 25445.45, 26155.37, 28450.9, 26586.47, 29614.36, 30088.0, 30124.44, 29213.95, 27355.54], [24328.0, 24773.89, 25489.51, 24347.53, 23250.23, 23394.27, 26257.48, 26530.11, 25048.73, 25327.93, 25572.6, 22623.57, 23115.72], [24328.0, 23390.51, 24897.35, 28219.95, 30750.9, 31054.45, 29961.25, 35327.46, 36320.01, 37248.37, 38121.3, 39490.14, 40151.59], [24328.0, 22957.57, 22835.54, 23359.71, 23239.89, 22908.15, 23612.46, 23863.63, 26544.41, 23542.17, 25604.6, 28083.36, 25703.71], [24328.0, 23248.45, 23347.06, 22158.62, 21765.09, 20994.26, 23670.9, 25526.85, 28036.98, 29884.6, 28797.2, 28679.03, 30184.32], [24328.0, 22160.24, 23609.42, 23879.62, 23976.49, 25541.61, 26816.2, 26945.32, 29414.44, 28418.39, 30117.06, 31877.56, 32120.96], [24328.0, 24111.68, 23080.25, 24874.09, 25234.89, 25133.8, 27272.42, 26895.58, 25525.19, 24029.76, 25452.33, 24324.65, 27429.67], [24328.0, 21145.59, 23769.1, 24639.95, 25117.81, 24986.94, 26169.39, 26762.96, 29126.28, 30034.53, 31032.06, 31176.99, 31850.6], [24328.0, 24087.6, 22487.39, 21411.85, 22849.76, 23635.14, 23979.17, 24598.13, 25689.89, 25563.23, 25108.57, 26006.98, 25267.36], [24328.0, 24219.85, 22620.21, 24518.4, 25781.72, 26791.97, 28966.77, 32505.7, 35205.05, 32632.94, 31188.57, 30891.24, 31701.85], [24328.0, 24364.73, 24000.05, 24846.5, 24435.1, 24219.7, 22987.91, 22401.38, 21325.88, 20722.21, 22491.13, 21886.03, 25889.09], [24328.0, 24332.42, 25187.94, 24632.23, 26224.92, 26044.63, 26868.18, 31657.49, 32272.6, 35210.57, 34726.25, 35519.03, 40087.97], [24328.0, 22890.96, 25894.23, 27579.71, 27409.78, 29074.25, 31416.95, 33305.51, 31331.03, 30859.74, 31200.69, 31844.44, 33756.61], [24328.0, 23917.38, 22789.39, 23843.22, 25261.04, 26689.17, 29010.33, 31111.88, 32691.01, 33373.28, 31239.88, 32772.65, 33967.21], [24328.0, 24040.08, 22979.58, 22201.44, 24095.99, 24639.96, 26206.27, 26897.21, 27608.53, 29777.45, 29668.96, 30563.95, 30541.99], [24328.0, 23132.39, 23309.49, 24178.15, 24139.09, 26489.93, 25854.36, 26226.57, 26239.95, 29097.11, 30139.4, 32673.36, 30878.53], [24328.0, 24034.15, 25853.61, 26613.42, 28903.88, 28796.63, 31866.74, 37016.27, 37190.71, 37197.98, 41262.73, 46087.57, 45902.61], [24328.0, 23150.44, 23362.53, 22249.66, 21687.38, 21041.03, 20678.64, 21151.07, 21953.75, 24481.97, 23759.82, 25690.78, 26022.14], [24328.0, 23623.04, 25115.56, 24210.04, 25332.62, 26197.04, 27576.68, 28709.08, 33633.87, 33289.77, 33141.47, 32828.52, 32638.69], [24328.0, 22877.96, 25014.81, 27698.57, 27515.49, 26946.6, 28333.2, 28174.36, 29886.12, 30967.42, 29218.19, 32577.67, 36818.55], [24328.0, 22908.66, 22985.45, 23925.01, 24969.02, 26523.04, 30328.0, 30781.26, 30200.86, 28707.63, 28269.95, 28918.27, 32680.42], [24328.0, 23027.82, 23888.14, 24458.24, 26741.79, 31451.68, 31311.78, 31242.98, 33892.47, 36047.71, 40853.35, 43219.82, 43431.89], [24328.0, 24461.87, 26629.83, 28538.02, 30065.23, 32654.89, 35666.57, 39410.66, 41841.06, 42489.14, 43891.74, 48037.11, 47083.48], [24328.0, 24167.66, 24241.22, 24880.93, 27337.82, 28308.67, 29083.75, 27675.1, 29538.43, 31354.51, 36152.96, 36432.52, 37784.08], [24328.0, 24011.01, 26815.52, 27337.69, 28444.54, 30131.56, 31193.99, 31198.5, 32311.72, 35108.19, 34020.34, 35117.06, 34639.79], [24328.0, 25281.21, 23843.5, 23701.17, 24793.13, 27670.99, 28255.29, 28092.33, 31897.25, 30206.82, 27458.87, 28822.46, 28739.36], [24328.0, 22404.25, 23863.35, 24781.9, 24627.05, 23536.1, 25294.17, 26856.21, 27373.38, 31022.49, 29989.92, 28280.82, 27908.95], [24328.0, 23628.03, 24536.91, 24816.5, 25924.27, 24814.73, 27511.89, 28067.72, 30569.56, 31917.9, 33533.5, 35448.59, 37224.55]], "cv_accs": {"Logistic Regression": 72.6, "Random Forest": 65.3, "Gradient Boosting": 68.4}}};
+const L = D.live;
+
+const PL = {paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',font:{family:"'Courier New',monospace",color:'#7a95b0',size:10},margin:{t:30,b:40,l:50,r:20}};
+const AX = {gridcolor:'#1a2d4a',zerolinecolor:'#1a2d4a',color:'#7a95b0',tickfont:{size:9},showline:false};
+const cl=(a,b,t)=>a+(b-a)*t;
+const lerp3=(c1,c2,t)=>`rgb(${Math.round(cl(c1[0],c2[0],t))},${Math.round(cl(c1[1],c2[1],t))},${Math.round(cl(c1[2],c2[2],t))})`;
+
+const models = ['Logistic Regression','Random Forest','Gradient Boosting'];
+const modelShort = ['LR','RF','GB'];
+const mColors = ['#00c4ff','#00e676','#ffd600'];
+
+// ── LIVE MODEL CARDS ─────────────────────────────────────────────
+const liveCardsEl = document.getElementById('live-model-cards');
+models.forEach((m,i)=>{
+  const upL = L.live_probas[m], dnL = L.live_down[m];
+  const upH = D.final_probas[m], dnH = D.final_down[m];
+  const delta = upL - upH;
+  const deltaStr = (delta>=0?'+':'')+delta.toFixed(1)+'pp';
+  const deltaCol = delta>=0?'var(--green)':'var(--red)';
+  const folds = D.cv_results[m].fold_accs;
+  const foldPips = folds.map(f=>`<div class="fold-pip" style="background:${lerp3([26,45,74],[10,110,200],f)};color:#fff;">${(f*100).toFixed(0)}%</div>`).join('');
+
+  liveCardsEl.innerHTML+=`
+  <div class="model-card live-card">
+    <div class="model-name" style="color:var(--green)">${modelShort[i]} · ${m}</div>
+    <div class="model-acc">CV ACC: <span style="color:var(--accent)">${L.cv_accs[m]}%</span> · LIVE UPDATE</div>
+    <div class="prob-section">
+      <div class="prob-row"><span class="prob-label">▲ UP (LIVE)</span><span class="prob-val live" style="color:${upL>=50?'var(--green)':'var(--red)'}">${upL}%</span></div>
+      <div class="prob-bar-wrap"><div class="prob-bar-fill bar-up" style="width:${upL}%"></div></div>
+      <div class="prob-row"><span class="prob-label">▼ DOWN (LIVE)</span><span class="prob-val live" style="color:${dnL>=50?'var(--red)':'var(--green)'}">${dnL}%</span></div>
+      <div class="prob-bar-wrap"><div class="prob-bar-fill bar-dn" style="width:${dnL}%"></div></div>
+    </div>
+    <div class="prev-row">
+      <span>PREV UP: ${upH}% | DOWN: ${dnH}%</span>
+      <span style="color:${deltaCol}">ΔFWD: ${deltaStr}</span>
+    </div>
+    <div style="font-size:9px;color:var(--text3);margin-top:10px;letter-spacing:1px;">5-FOLD CV ACCURACIES</div>
+    <div class="fold-pips">${foldPips}</div>
+  </div>`;
+});
+
+// ── HISTORICAL MODEL CARDS ────────────────────────────────────────
+const histCardsEl = document.getElementById('hist-model-cards');
+models.forEach((m,i)=>{
+  const up=D.final_probas[m], dn=D.final_down[m];
+  const folds=D.cv_results[m].fold_accs;
+  const fp=folds.map(f=>`<div class="fold-pip" style="background:${lerp3([26,45,74],[10,110,200],f)};color:#fff;">${(f*100).toFixed(0)}%</div>`).join('');
+  histCardsEl.innerHTML+=`
+  <div class="model-card">
+    <div class="model-name">${modelShort[i]} · ${m}</div>
+    <div class="model-acc">CV ACC: <span style="color:var(--accent)">${D.avg_cv_acc[m]}%</span> · FEB 2026 BASELINE</div>
+    <div class="prob-row"><span class="prob-label">▲ UP</span><span class="prob-val" style="color:${up>=50?'var(--green)':'var(--red)'}">${up}%</span></div>
+    <div class="prob-bar-wrap"><div class="prob-bar-fill bar-up" style="width:${up}%"></div></div>
+    <div class="prob-row"><span class="prob-label">▼ DOWN</span><span class="prob-val" style="color:${dn>=50?'var(--red)':'var(--green)'}">${dn}%</span></div>
+    <div class="prob-bar-wrap"><div class="prob-bar-fill bar-dn" style="width:${dn}%"></div></div>
+    <div class="fold-pips">${fp}</div>
+  </div>`;
+});
+
+// ── FEATURE VECTOR TABLE ──────────────────────────────────────────
+const fvTable = document.getElementById('fv-table');
+const fv = L.live_features;
+const maxAbsVal = Math.max(...Object.values(fv).map(Math.abs));
+Object.entries(fv).forEach(([k,v])=>{
+  const pct = Math.min(Math.abs(v)/maxAbsVal*100,100);
+  const col = v>=0?'var(--green)':'var(--red)';
+  const bg = v>=0?'rgba(0,230,118,.7)':'rgba(255,23,68,.7)';
+  fvTable.innerHTML+=`<tr>
+    <td class="fv-name">${k}</td>
+    <td class="fv-bar"><div style="height:4px;background:#1a2d4a;border-radius:2px;overflow:hidden;"><div style="width:${pct}%;height:100%;background:${bg};border-radius:2px;"></div></div></td>
+    <td class="fv-val" style="color:${col}">${v>0?'+':''}${v.toFixed(4)}</td>
+  </tr>`;
+});
+
+// ── SIGNAL COMPARISON CHART ───────────────────────────────────────
+Plotly.newPlot('plot-compare',[
+  {type:'bar',name:'Previous (Feb 2026)',x:['Logistic Reg','Random Forest','Grad. Boost','Ensemble'],y:[D.final_down['Logistic Regression'],D.final_down['Random Forest'],D.final_down['Gradient Boosting'],D.ensemble_down],marker:{color:'rgba(0,196,255,0.6)',line:{color:'#00c4ff',width:1}}},
+  {type:'bar',name:'Live Update (Apr 25)',x:['Logistic Reg','Random Forest','Grad. Boost','Ensemble'],y:[L.live_down['Logistic Regression'],L.live_down['Random Forest'],L.live_down['Gradient Boosting'],L.ensemble_down],marker:{color:'rgba(255,23,68,0.7)',line:{color:'#ff1744',width:1}}}
+],{...PL,barmode:'group',xaxis:{...AX},yaxis:{...AX,title:'P(DOWN) %',range:[0,105],ticksuffix:'%'},legend:{font:{size:9},bgcolor:'rgba(0,0,0,0)'},title:{text:'Signal Comparison: P(DOWN) · Previous vs Live Update',font:{size:10,color:'#7a95b0'},y:.97},shapes:[{type:'line',x0:-0.5,x1:3.5,y0:50,y1:50,line:{color:'#3d5a78',width:1,dash:'dot'}}]},{responsive:true});
+
+// ── LIVE MONTE CARLO ───────────────────────────────────────────────
+(function(){
+  const steps=Array.from({length:13},(_,i)=>i);
+  const traces=L.mc_paths_live.map((path,pi)=>{
+    const endVal=path[path.length-1];
+    const col=endVal>=L.live_nifty?'rgba(0,230,118,0.25)':'rgba(255,23,68,0.25)';
+    return {type:'scatter3d',mode:'lines',x:steps,y:Array(13).fill(pi),z:path,line:{color:col,width:1.5},showlegend:false,hoverinfo:'skip'};
+  });
+  const meanPath=steps.map(s=>L.mc_paths_live.reduce((sum,p)=>sum+p[s],0)/L.mc_paths_live.length);
+  traces.push({type:'scatter3d',mode:'lines',name:'Mean Path',x:steps,y:Array(13).fill(40),z:meanPath,line:{color:'#00c4ff',width:5},showlegend:true});
+  traces.push({type:'scatter3d',mode:'lines',name:'Live Close',x:[0,12],y:[0,0],z:[L.live_nifty,L.live_nifty],line:{color:'#ffd600',width:3,dash:'dash'},showlegend:true});
+  Plotly.newPlot('plot-mc-live',traces,{...PL,scene:{xaxis:{...AX,title:'Month'},yaxis:{...AX,title:'Simulation'},zaxis:{...AX,title:'NIFTY 50'},bgcolor:'rgba(0,0,0,0)',camera:{eye:{x:1.5,y:-1.5,z:0.8}}},legend:{font:{size:9},bgcolor:'rgba(0,0,0,0)'},title:{text:'Live MC · VIX-Blended Vol=3.95%/mo · NIFTY Base 24,328 · Drag to Rotate',font:{size:10,color:'#7a95b0'},y:.97}},{responsive:true});
+})();
+
+// ── LIVE RADAR ─────────────────────────────────────────────────────
+(function(){
+  const cats=['P(DOWN)','Confidence','CV Accuracy','Signal Shift','VIX Signal'];
+  const liveVals=[
+    [L.live_down['Logistic Regression']/100,L.live_down['Random Forest']/100,L.live_down['Gradient Boosting']/100],
+    [0.831,0.831,0.831],
+    [0.726,0.653,0.684],
+    [0.965-0.549,0.806-0.585,0.967-0.868],
+    [L.live_vix/25,L.live_vix/25,L.live_vix/25]
+  ];
+  const traces=models.map((m,i)=>{
+    const vals=cats.map((_,ci)=>liveVals[ci][i]*100);
+    return {type:'scatterpolar',mode:'lines+markers',name:m,r:[...vals,vals[0]],theta:[...cats,cats[0]],fill:'toself',fillcolor:['rgba(0,196,255,0.08)','rgba(0,230,118,0.08)','rgba(255,214,0,0.08)'][i],line:{color:mColors[i],width:2},marker:{size:5}};
+  });
+  Plotly.newPlot('plot-radar-live',traces,{...PL,polar:{bgcolor:'rgba(0,0,0,0)',radialaxis:{...AX,range:[0,100],ticksuffix:'%'},angularaxis:{...AX}},legend:{font:{size:9},bgcolor:'rgba(0,0,0,0)'},title:{text:'Live Signal Radar · April 25, 2026',font:{size:10,color:'#7a95b0'},y:.97}},{responsive:true});
+})();
+
+// ── 3D FEATURE IMPORTANCE ──────────────────────────────────────────
+(function(){
+  const feats=D.feature_cols;
+  const mNames=['Logistic Regression','Random Forest','Gradient Boosting'];
+  const Z=mNames.map(m=>feats.map(f=>D.feature_importances[m][f]||0));
+  Plotly.newPlot('plot-fi3d',[{type:'surface',x:feats,y:mNames,z:Z,colorscale:[[0,'#050a0f'],[0.3,'#003366'],[0.6,'#006699'],[0.8,'#00aacc'],[1,'#00e676']],contours:{z:{show:true,usecolormap:true,highlightcolor:'#ffd600',project:{z:true}}},opacity:.9,showscale:false}],{...PL,scene:{xaxis:{...AX,title:'Feature',tickangle:45,tickfont:{size:7}},yaxis:{...AX,title:'Model'},zaxis:{...AX,title:'Importance'},bgcolor:'rgba(0,0,0,0)',camera:{eye:{x:1.8,y:-1.2,z:1.2}}},title:{text:'Feature Importance Surface · Drag to Rotate',font:{size:10,color:'#7a95b0'},y:.97}},{responsive:true});
+})();
+
+// ── 3D PROB SURFACE ────────────────────────────────────────────────
+(function(){
+  const dates=D.prob_dates;
+  const mNames=['Logistic Regression','Random Forest','Gradient Boosting'];
+  const validIdx=dates.map((_,i)=>i).filter(i=>D.prob_evolution['Logistic Regression'][i]!==null);
+  const filtDates=validIdx.map(i=>dates[i]);
+  const Z=mNames.map(m=>validIdx.map(i=>D.prob_evolution[m][i]));
+  Plotly.newPlot('plot-probsurface',[{type:'surface',x:mNames,y:filtDates,z:Z.map((row,mi)=>filtDates.map((_,ti)=>Z[mi][ti])),transpose:true,colorscale:[[0,'#ff1744'],[0.35,'#660011'],[0.5,'#1a2d4a'],[0.65,'#003366'],[1,'#00e676']],cmin:.3,cmax:.8,showscale:false,contours:{z:{show:true,usecolormap:true,project:{z:true}}}}],{...PL,scene:{xaxis:{...AX,title:'Model'},yaxis:{...AX,title:'Date'},zaxis:{...AX,title:'P(UP)',range:[.2,.9]},bgcolor:'rgba(0,0,0,0)',camera:{eye:{x:1.5,y:-1.5,z:1.0}}},title:{text:'P(UP) Evolution · Drag to Rotate',font:{size:10,color:'#7a95b0'},y:.97}},{responsive:true});
+})();
+
+// ── 3D SCATTER ─────────────────────────────────────────────────────
+(function(){
+  const upIdx=D.scatter_actual.map((_,i)=>i).filter(i=>D.scatter_actual[i]===1);
+  const dnIdx=D.scatter_actual.map((_,i)=>i).filter(i=>D.scatter_actual[i]===0);
+  const mk=(idxs,col,name)=>({type:'scatter3d',mode:'markers',name,x:idxs.map(i=>D.scatter_lr[i]),y:idxs.map(i=>D.scatter_rf[i]),z:idxs.map(i=>D.scatter_gb[i]),marker:{color:col,size:4,opacity:.8}});
+  // Add LIVE point
+  const liveTrace={type:'scatter3d',mode:'markers',name:'⚡ LIVE (Apr 25)',x:[L.live_probas['Logistic Regression']/100],y:[L.live_probas['Random Forest']/100],z:[L.live_probas['Gradient Boosting']/100],marker:{color:'#ffd600',size:12,symbol:'diamond',line:{color:'#fff',width:2}}};
+  Plotly.newPlot('plot-scatter3d',[mk(upIdx,'#00e676','Actual UP'),mk(dnIdx,'#ff1744','Actual DOWN'),liveTrace],{...PL,scene:{xaxis:{...AX,title:'LR Prob',range:[0,1]},yaxis:{...AX,title:'RF Prob',range:[0,1]},zaxis:{...AX,title:'GB Prob',range:[0,1]},bgcolor:'rgba(0,0,0,0)',camera:{eye:{x:1.6,y:-1.4,z:.8}}},legend:{font:{size:9},bgcolor:'rgba(0,0,0,0)'},title:{text:'Model Agreement Cloud · ◆ = Live Signal · Drag to Rotate',font:{size:10,color:'#7a95b0'},y:.97}},{responsive:true});
+})();
+
+// ── ROLLING ACCURACY ───────────────────────────────────────────────
+(function(){
+  const dates=D.rolling_acc_dates;
+  const clrs=['#00c4ff','#00e676','#ffd600'];
+  const traces=models.map((m,i)=>({type:'scatter',mode:'lines',name:m,x:dates.filter((_,j)=>D.rolling_acc[m][j]!==null),y:D.rolling_acc[m].filter(v=>v!==null).map(v=>+(v*100).toFixed(1)),line:{color:clrs[i],width:2,shape:'spline'}}));
+  traces.push({type:'scatter',mode:'lines',name:'50% Chance',x:dates,y:Array(dates.length).fill(50),line:{color:'#3d5a78',width:1,dash:'dot'}});
+  Plotly.newPlot('plot-rolling',traces,{...PL,xaxis:{...AX},yaxis:{...AX,title:'Accuracy (%)',range:[30,100]},legend:{font:{size:9},bgcolor:'rgba(0,0,0,0)'},hovermode:'x unified',title:{text:'12-Month Rolling Walk-Forward Accuracy',font:{size:10,color:'#7a95b0'},y:.97}},{responsive:true});
+})();
+
+// ── CONFUSION MATRICES ────────────────────────────────────────────
+const cmEl=document.getElementById('cm-cards');
+models.forEach((m,i)=>{
+  const cm=D.conf_matrices[m];
+  const tn=cm[0][0],fp=cm[0][1],fn=cm[1][0],tp=cm[1][1];
+  const prec=tp/(tp+fp)||0,rec=tp/(tp+fn)||0,f1=2*prec*rec/(prec+rec)||0;
+  cmEl.innerHTML+=`
+  <div class="card">
+    <div class="card-title">${modelShort[i]} · ${m}</div>
+    <div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:4px;align-items:center;font-size:9px;color:var(--text3);">
+      <div></div><div style="text-align:center">PRED DN</div><div style="text-align:center">PRED UP</div>
+      <div>ACT DN</div><div class="cm-cell cm-tn">${tn}<div style="font-size:8px;color:var(--text3)">TN</div></div><div class="cm-cell cm-fp">${fp}<div style="font-size:8px;color:var(--text3)">FP</div></div>
+      <div>ACT UP</div><div class="cm-cell cm-fn">${fn}<div style="font-size:8px;color:var(--text3)">FN</div></div><div class="cm-cell cm-tp">${tp}<div style="font-size:8px;color:var(--text3)">TP</div></div>
+    </div>
+    <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center;">
+      <div><div style="font-size:15px;font-weight:bold;color:var(--accent)">${(prec*100).toFixed(0)}%</div><div style="font-size:8px;color:var(--text3)">PRECISION</div></div>
+      <div><div style="font-size:15px;font-weight:bold;color:var(--gold)">${(rec*100).toFixed(0)}%</div><div style="font-size:8px;color:var(--text3)">RECALL</div></div>
+      <div><div style="font-size:15px;font-weight:bold;color:var(--green)">${(f1*100).toFixed(0)}%</div><div style="font-size:8px;color:var(--text3)">F1</div></div>
+    </div>
+  </div>`;
+});
+
+// ── HISTORICAL RADAR ───────────────────────────────────────────────
+(function(){
+  const cats=['CV Accuracy','Precision','Recall','F1 Score','Signal Strength'];
+  const traces=models.map((m,i)=>{
+    const cm=D.conf_matrices[m];
+    const tn=cm[0][0],fp=cm[0][1],fn=cm[1][0],tp=cm[1][1];
+    const prec=tp/(tp+fp)||0,rec=tp/(tp+fn)||0,f1=2*prec*rec/(prec+rec)||0;
+    const vals=[D.avg_cv_acc[m]/100,prec,rec,f1,Math.abs(D.final_probas[m]-50)/50];
+    return {type:'scatterpolar',mode:'lines+markers',name:m,r:[...vals.map(v=>v*100),vals[0]*100],theta:[...cats,cats[0]],fill:'toself',fillcolor:['rgba(0,196,255,0.08)','rgba(0,230,118,0.08)','rgba(255,214,0,0.08)'][i],line:{color:mColors[i],width:2},marker:{size:5}};
+  });
+  Plotly.newPlot('plot-radar',traces,{...PL,polar:{bgcolor:'rgba(0,0,0,0)',radialaxis:{...AX,range:[0,100],ticksuffix:'%'},angularaxis:{...AX}},legend:{font:{size:9},bgcolor:'rgba(0,0,0,0)'},title:{text:'Model Performance Radar (Baseline)',font:{size:10,color:'#7a95b0'},y:.97}},{responsive:true});
+})();
+
+// ── CORRELATION HEATMAP ────────────────────────────────────────────
+Plotly.newPlot('plot-corr',[{type:'heatmap',x:D.feature_cols,y:D.feature_cols,z:D.corr_matrix,colorscale:[[0,'#ff1744'],[0.25,'#661100'],[0.5,'#1a2d4a'],[0.75,'#003366'],[1,'#00e676']],zmid:0,zmin:-1,zmax:1,showscale:false,text:D.corr_matrix.map(row=>row.map(v=>v.toFixed(2))),texttemplate:'%{text}',textfont:{size:7}}],{...PL,xaxis:{...AX,tickangle:45,tickfont:{size:7}},yaxis:{...AX,tickfont:{size:7}},margin:{t:30,b:80,l:80,r:20},title:{text:'Feature Correlation Heatmap',font:{size:10,color:'#7a95b0'},y:.97}},{responsive:true});
+
+// ── FEATURE IMPORTANCE BAR ─────────────────────────────────────────
+(function(){
+  const traces=models.map((m,i)=>({type:'bar',name:m,x:D.feature_cols,y:D.feature_cols.map(f=>(D.feature_importances[m][f]*100).toFixed(2)),marker:{color:mColors[i],opacity:.8}}));
+  Plotly.newPlot('plot-fi',traces,{...PL,barmode:'group',xaxis:{...AX,tickangle:30,tickfont:{size:8}},yaxis:{...AX,title:'Importance (%)',ticksuffix:'%'},legend:{font:{size:9},bgcolor:'rgba(0,0,0,0)'},title:{text:'Normalized Feature Importance',font:{size:10,color:'#7a95b0'},y:.97}},{responsive:true});
+})();
+
+// ── COUNTER ANIMATION ──────────────────────────────────────────────
+function animateCounter(el,from,to,dur,suffix='%'){
+  const start=performance.now();
+  const upd=t=>{const p=Math.min((t-start)/dur,1);const ease=p<.5?2*p*p:(4-2*p)*p-1;el.textContent=(from+(to-from)*ease).toFixed(1)+suffix;if(p<1)requestAnimationFrame(upd);};
+  requestAnimationFrame(upd);
+}
+setTimeout(()=>{animateCounter(document.getElementById('hero-prob'),50,74.2,1400)},300);
+
+}
+// If Plotly somehow loaded before this script ran (cache hit):
+if(typeof Plotly !== 'undefined'){ initCharts(); }
+
+// ── AUTO REFRESH (IST MARKET-AWARE) ───────────────────────────────
+(function(){
+  const IST_TIMEZONE = 'Asia/Kolkata';
+  const MARKET_OPEN_MIN = 9 * 60 + 15;   // 09:15 IST
+  const MARKET_CLOSE_MIN = 15 * 60 + 30; // 15:30 IST
+  let refreshTimer = null;
+  let countdownTimer = null;
+  let feedSource = 'SRC: STATIC';
+
+  function istParts(date){
+    const parts = new Intl.DateTimeFormat('en-IN', {
+      timeZone: IST_TIMEZONE,
+      weekday: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    }).formatToParts(date);
+    const pick = (type) => (parts.find(p => p.type === type) || {}).value || '';
+    return {
+      weekday: pick('weekday'),
+      hour: Number(pick('hour') || 0),
+      minute: Number(pick('minute') || 0),
+      second: Number(pick('second') || 0)
+    };
+  }
+
+  function formatIstDateLong(date){
+    return new Intl.DateTimeFormat('en-IN', {
+      timeZone: IST_TIMEZONE,
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    }).format(date).toUpperCase();
+  }
+
+  function formatIstClock(date){
+    return new Intl.DateTimeFormat('en-IN', {
+      timeZone: IST_TIMEZONE,
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    }).format(date) + ' IST';
+  }
+
+  function numberFmt(v){
+    return Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function signedPct(v){
+    const n = Number(v || 0);
+    return `${n >= 0 ? '+' : ''}${n.toFixed(2)}%`;
+  }
+
+  function updateTextByLabel(rootSelector, labelText, valueText){
+    document.querySelectorAll(rootSelector).forEach(node => {
+      const lbl = node.querySelector('.live-stat-lbl');
+      const val = node.querySelector('.live-stat-val');
+      if(lbl && val && lbl.textContent.trim() === labelText){
+        val.textContent = valueText;
+      }
+    });
+  }
+
+  function updateTickerValue(label, text, className){
+    document.querySelectorAll('#ticker-inner .tick-item').forEach(item => {
+      const lbl = item.querySelector('.tick-lbl');
+      if(!lbl || lbl.textContent.trim() !== label) return;
+      const target = item.querySelector('.tick-up, .tick-dn');
+      if(target){
+        target.className = className;
+        target.textContent = text;
+      }
+    });
+  }
+
+  function updateTickerModelMetrics(downProb, confidencePct, modelProbs){
+    const directionText = downProb >= 0.5 ? '▼ BEARISH' : '▲ BULLISH';
+    const cls = downProb >= 0.5 ? 'tick-dn' : 'tick-up';
+    const confArrow = confidencePct >= 50 ? '↑' : '↓';
+    updateTickerValue('ENSEMBLE DOWN', `${(downProb * 100).toFixed(2)}% ${directionText}`, cls);
+    updateTickerValue('CONFIDENCE', `${confidencePct.toFixed(1)}% ${confArrow} ML`, confidencePct >= 50 ? 'tick-dn' : 'tick-up');
+    if(modelProbs){
+      if(Number.isFinite(modelProbs.logreg)) updateTickerValue('LR P(DOWN)', `${(modelProbs.logreg * 100).toFixed(2)}%`, 'tick-dn');
+      if(Number.isFinite(modelProbs.rf)) updateTickerValue('RF P(DOWN)', `${(modelProbs.rf * 100).toFixed(2)}%`, 'tick-dn');
+      if(Number.isFinite(modelProbs.gb)) updateTickerValue('GB P(DOWN)', `${(modelProbs.gb * 100).toFixed(2)}%`, 'tick-dn');
+    }
+  }
+
+  function applyForecastSnapshot(payload){
+    const down = Number(payload.ensemble_down || 0);
+    const up = Number(payload.ensemble_up || (1 - down));
+    const confidence = Math.abs(down - 0.5) * 200;
+    const signal = String(payload.signal || '').toUpperCase();
+    const heroProbEl = document.getElementById('hero-prob');
+    const heroVerdictEl = document.getElementById('hero-verdict');
+    const heroUpProbEl = document.getElementById('hero-up-prob');
+    const heroConfidenceEl = document.getElementById('hero-confidence');
+    const deltaBadgeEl = document.getElementById('signal-delta-badge');
+
+    if(heroProbEl) heroProbEl.textContent = `${(down * 100).toFixed(1)}%`;
+    if(heroUpProbEl) heroUpProbEl.textContent = `${(up * 100).toFixed(1)}%`;
+    if(heroConfidenceEl){
+      heroConfidenceEl.textContent = `${confidence.toFixed(1)}%`;
+      heroConfidenceEl.style.color = confidence >= 60 ? 'var(--red)' : 'var(--gold)';
+    }
+
+    if(heroVerdictEl){
+      if(signal === 'BEARISH'){
+        heroVerdictEl.textContent = '▼ BEARISH';
+        heroVerdictEl.classList.remove('verdict-up');
+        heroVerdictEl.classList.add('verdict-down');
+      }else if(signal === 'BULLISH'){
+        heroVerdictEl.textContent = '▲ BULLISH';
+        heroVerdictEl.classList.remove('verdict-down');
+        heroVerdictEl.classList.add('verdict-up');
+      }else{
+        heroVerdictEl.textContent = '◆ NEUTRAL';
+        heroVerdictEl.classList.remove('verdict-down');
+        heroVerdictEl.classList.add('verdict-up');
+      }
+    }
+
+    if(deltaBadgeEl){
+      const p = payload.model_prob_down || {};
+      const l = Number.isFinite(p.logreg) ? (p.logreg * 100).toFixed(1) : 'NA';
+      const r = Number.isFinite(p.rf) ? (p.rf * 100).toFixed(1) : 'NA';
+      const g = Number.isFinite(p.gb) ? (p.gb * 100).toFixed(1) : 'NA';
+      deltaBadgeEl.textContent = `ML FORECAST · ENSEMBLE DOWN ${(down * 100).toFixed(1)}% · LR ${l}% | RF ${r}% | GB ${g}% · SIGNAL: ${signal || 'UNKNOWN'}`;
+      deltaBadgeEl.style.color = down >= 0.5 ? 'var(--red)' : 'var(--green)';
+      deltaBadgeEl.style.borderColor = down >= 0.5 ? 'rgba(255,23,68,.4)' : 'rgba(0,230,118,.4)';
+      deltaBadgeEl.style.background = down >= 0.5 ? 'rgba(255,23,68,.12)' : 'rgba(0,230,118,.12)';
+    }
+
+    updateTickerModelMetrics(down, confidence, payload.model_prob_down || {});
+
+    // Update "live inputs" strip from latest feature snapshot (if present)
+    const fs = payload.feature_snapshot || {};
+    const setTxt = (id, txt) => {
+      const el = document.getElementById(id);
+      if(el) el.textContent = txt;
+    };
+    const pct = (v) => `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`;
+    if(Number.isFinite(Number(fs.rsi_126))) setTxt('live-strip-rsi6m', Number(fs.rsi_126).toFixed(2));
+    if(Number.isFinite(Number(fs.mom_126d))) setTxt('live-strip-mom6m', pct(Number(fs.mom_126d) * 100));
+    if(Number.isFinite(Number(fs.dev_ma_126))) setTxt('live-strip-dev6m', pct(Number(fs.dev_ma_126) * 100));
+    if(Number.isFinite(Number(fs.vix_norm_21d))) setTxt('live-strip-regime', `${Number(fs.vix_norm_21d) >= 0 ? '+' : ''}${Number(fs.vix_norm_21d).toFixed(3)}`);
+    if(Number.isFinite(Number(fs.vol_21d))) setTxt('live-strip-volmo', `${(Number(fs.vol_21d) * 100).toFixed(2)}%`);
+
+    // Expected move: use monthly volatility proxy when available
+    const expMoveEl = document.getElementById('hero-expected-move');
+    if(expMoveEl && Number.isFinite(Number(fs.vol_21d))){
+      expMoveEl.textContent = `±${(Number(fs.vol_21d) * 100).toFixed(2)}%`;
+    }
+
+    // Explainability cards
+    const ex = payload.explainability || {};
+    const top = ex.top_features || [];
+    const gi = document.getElementById('global-importance-list');
+    if(gi){
+      if(top.length){
+        gi.innerHTML = top.slice(0, 8).map(row => {
+          const f = String(row.feature || 'NA');
+          const v = Number(row.importance || 0);
+          return `<div class="rationale-item"><span class="rationale-key">${f}</span><span class="rationale-val">${(v * 100).toFixed(2)}%</span></div>`;
+        }).join('');
+      }else{
+        gi.innerHTML = '<div class="rationale-item"><span class="rationale-key">No explainability data</span><span class="rationale-val">--</span></div>';
+      }
+    }
+
+    const sc = ex.signal_change || {};
+    const scSummaryEl = document.getElementById('signal-change-summary');
+    if(scSummaryEl){
+      scSummaryEl.textContent = String(sc.summary || 'No signal-change diagnostics available.');
+      const dpp = Number(sc.delta_ensemble_down_pp);
+      scSummaryEl.style.borderColor = Number.isFinite(dpp)
+        ? (dpp >= 0 ? 'rgba(255,23,68,.4)' : 'rgba(0,230,118,.4)')
+        : 'var(--border)';
+      scSummaryEl.style.background = Number.isFinite(dpp)
+        ? (dpp >= 0 ? 'rgba(255,23,68,.08)' : 'rgba(0,230,118,.08)')
+        : 'rgba(0,196,255,.06)';
+    }
+    const scListEl = document.getElementById('signal-change-list');
+    const whyRows = sc.why_signal_changed || [];
+    if(scListEl){
+      if(whyRows.length){
+        scListEl.innerHTML = whyRows.map(row => {
+          const f = String(row.feature || 'NA');
+          const d = Number(row.delta || 0);
+          const wd = Number(row.weighted_delta || 0);
+          return `<div class="rationale-item"><span class="rationale-key">${f} (${d >= 0 ? '+' : ''}${d.toFixed(4)})</span><span class="rationale-val">${wd.toFixed(6)}</span></div>`;
+        }).join('');
+      }else{
+        scListEl.innerHTML = '<div class="rationale-item"><span class="rationale-key">No prior run comparison</span><span class="rationale-val">--</span></div>';
+      }
+    }
+
+    const v = payload.validation || {};
+    const bt = payload.backtest || {};
+    const avgAuc = ['logreg', 'rf', 'gb']
+      .map(k => Number(v?.[k]?.auc_mean))
+      .filter(Number.isFinite);
+    const avgBrier = ['logreg', 'rf', 'gb']
+      .map(k => Number(v?.[k]?.brier_mean))
+      .filter(Number.isFinite);
+    const avgPrecision = ['logreg', 'rf', 'gb']
+      .map(k => Number(v?.[k]?.precision_down_mean))
+      .filter(Number.isFinite);
+
+    const setText = (id, text) => {
+      const el = document.getElementById(id);
+      if(el) el.textContent = text;
+    };
+    const setMetricClass = (id, cls) => {
+      const el = document.getElementById(id);
+      if(!el) return;
+      el.classList.remove('metric-good', 'metric-warn', 'metric-bad');
+      if(cls) el.classList.add(cls);
+    };
+    const classifyMetric = (value, goodCond, warnCond) => {
+      if(!Number.isFinite(value)) return 'metric-warn';
+      if(goodCond(value)) return 'metric-good';
+      if(warnCond(value)) return 'metric-warn';
+      return 'metric-bad';
+    };
+    const mean = arr => arr.length ? (arr.reduce((a,b)=>a+b,0)/arr.length) : null;
+
+    const mAuc = mean(avgAuc);
+    const mBrier = mean(avgBrier);
+    const mPrec = mean(avgPrecision);
+
+    setText('health-auc', Number.isFinite(mAuc) ? mAuc.toFixed(3) : '--');
+    setText('health-brier', Number.isFinite(mBrier) ? mBrier.toFixed(3) : '--');
+    setText('health-precision', Number.isFinite(mPrec) ? `${(mPrec * 100).toFixed(1)}%` : '--');
+    setText('health-sharpe', Number.isFinite(Number(bt.sharpe)) ? Number(bt.sharpe).toFixed(2) : '--');
+    setText('health-dd', Number.isFinite(Number(bt.max_drawdown_pct)) ? `${Number(bt.max_drawdown_pct).toFixed(1)}%` : '--');
+    setText('health-trained-at', payload.generated_at ? String(payload.generated_at).replace('T', ' ').replace('Z', '') : '--');
+
+    // Traffic-light thresholds for quick model quality reading
+    const cAuc = classifyMetric(mAuc, v => v >= 0.60, v => v >= 0.53);
+    const cBrier = classifyMetric(mBrier, v => v <= 0.20, v => v <= 0.24);
+    const cPrec = classifyMetric(mPrec, v => v >= 0.55, v => v >= 0.50);
+    const s = Number(bt.sharpe);
+    const d = Number(bt.max_drawdown_pct);
+    const cSharpe = classifyMetric(s, v => v >= 1.2, v => v >= 0.8);
+    const cDD = classifyMetric(d, v => v >= -15, v => v >= -25);
+
+    setMetricClass('health-auc', cAuc);
+    setMetricClass('health-brier', cBrier);
+    setMetricClass('health-precision', cPrec);
+    setMetricClass('health-sharpe', cSharpe);
+    setMetricClass('health-dd', cDD);
+
+    const classes = [cAuc, cBrier, cPrec, cSharpe, cDD];
+    const badCount = classes.filter(c => c === 'metric-bad').length;
+    const warnCount = classes.filter(c => c === 'metric-warn').length;
+    const statusChip = document.getElementById('health-status-chip');
+    if(statusChip){
+      statusChip.classList.remove('metric-good', 'metric-warn', 'metric-bad');
+      if(badCount >= 2){
+        statusChip.textContent = 'RISK';
+        statusChip.classList.add('metric-bad');
+        statusChip.style.borderColor = 'rgba(255,23,68,.5)';
+        statusChip.style.background = 'rgba(255,23,68,.12)';
+      }else if(badCount === 1 || warnCount >= 2){
+        statusChip.textContent = 'WATCH';
+        statusChip.classList.add('metric-warn');
+        statusChip.style.borderColor = 'rgba(255,214,0,.5)';
+        statusChip.style.background = 'rgba(255,214,0,.12)';
+      }else{
+        statusChip.textContent = 'GOOD';
+        statusChip.classList.add('metric-good');
+        statusChip.style.borderColor = 'rgba(0,230,118,.5)';
+        statusChip.style.background = 'rgba(0,230,118,.12)';
+      }
+    }
+  }
+
+  async function refreshForecastFeed(){
+    try{
+      const res = await fetch('/api/forecast', { cache: 'no-store' });
+      if(!res.ok) throw new Error('Forecast API failed');
+      const payload = await res.json();
+      if(!payload?.ok) throw new Error('Forecast unavailable');
+      applyForecastSnapshot(payload);
+      feedSource = `${feedSource} + FORECAST`;
+    }catch(_e){
+      // keep previous values if forecast is unavailable
+    }
+  }
+
+  function applyLiveSnapshot(snapshot){
+    const { nifty, vix, mtd, marketDate } = snapshot;
+    const dateText = marketDate.toUpperCase();
+    document.querySelectorAll('.js-live-date').forEach(el => { el.textContent = dateText; });
+    const headerDate = document.getElementById('live-date-header');
+    const footerDate = document.getElementById('footer-live-date');
+    const liveModelDate = document.getElementById('live-model-date-label');
+    if(headerDate) headerDate.textContent = dateText;
+    if(footerDate) footerDate.textContent = dateText;
+    if(liveModelDate) liveModelDate.textContent = marketDate;
+
+    const niftyText = `${numberFmt(nifty)} ${mtd >= 0 ? '▲' : '▼'} ${signedPct(mtd)}`;
+    updateTickerValue('NIFTY50', niftyText, mtd >= 0 ? 'tick-up' : 'tick-dn');
+    updateTickerValue('INDIA VIX', `${vix.toFixed(2)} ${vix >= 20 ? '▲ HIGH' : '▼ NORMAL'}`, vix >= 20 ? 'tick-dn' : 'tick-up');
+
+    updateTextByLabel('#live-strip .live-stat', 'NIFTY 50', numberFmt(nifty));
+    updateTextByLabel('#live-strip .live-stat', 'MTD RETURN', signedPct(mtd));
+    updateTextByLabel('#live-strip .live-stat', 'INDIA VIX', vix.toFixed(2));
+
+    // Update hero meta live cards
+    const heroPrice = document.getElementById('hero-live-price');
+    const heroVix = document.getElementById('hero-live-vix');
+    if(heroPrice) heroPrice.textContent = `₹${Number(nifty).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+    if(heroVix) heroVix.textContent = Number(vix).toFixed(2);
+
+    // Mirror to strip ids (so other code can target stable ids)
+    const stripNifty = document.getElementById('live-strip-nifty');
+    const stripMtd = document.getElementById('live-strip-mtd');
+    const stripVix = document.getElementById('live-strip-vix');
+    if(stripNifty) stripNifty.textContent = numberFmt(nifty);
+    if(stripMtd) stripMtd.textContent = signedPct(mtd);
+    if(stripVix) stripVix.textContent = Number(vix).toFixed(2);
+
+    const footerNifty = document.getElementById('footer-nifty');
+    const footerVix = document.getElementById('footer-vix');
+    if(footerNifty) footerNifty.textContent = numberFmt(nifty);
+    if(footerVix) footerVix.textContent = vix.toFixed(2);
+  }
+
+  function withTimeout(promise, ms){
+    let timeoutId;
+    const timeout = new Promise((_, reject) => {
+      timeoutId = setTimeout(() => reject(new Error('timeout')), ms);
+    });
+    return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
+  }
+
+  async function fetchYahooQuotes(symbols){
+    const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(symbols.join(','))}&_=${Date.now()}`;
+    const res = await fetch(url, { cache: 'no-store' });
+    if(!res.ok) throw new Error(`quote http ${res.status}`);
+    const data = await res.json();
+    const rows = data?.quoteResponse?.result || [];
+    return new Map(rows.map(r => [r.symbol, r]));
+  }
+
+  async function refreshLiveMarketFeed(){
+    // Prefer your backend (/api/live). If unavailable, fall back to direct quotes.
+    try{
+      const res = await withTimeout(fetch('/api/live', { cache: 'no-store' }), 4000);
+      if(!res.ok) throw new Error('API fetch failed');
+      const payload = await res.json();
+      if(!payload?.ok) throw new Error('API returned fallback');
+      applyLiveSnapshot({
+        nifty: Number(payload.nifty),
+        vix: Number(payload.vix),
+        mtd: Number(payload.mtd),
+        marketDate: String(payload.marketDate || formatIstDateLong(new Date()))
+      });
+      feedSource = `SRC: ${payload.source || 'API'}`;
+      return;
+    }catch(_e){
+      // continue to fallback
+    }
+
+    try{
+      const quotes = await withTimeout(fetchYahooQuotes(['^NSEI', '^INDIAVIX']), 6000);
+      const niftyRow = quotes.get('^NSEI');
+      const vixRow = quotes.get('^INDIAVIX');
+
+      const nifty = Number(niftyRow?.regularMarketPrice ?? niftyRow?.postMarketPrice);
+      const vix = Number(vixRow?.regularMarketPrice ?? vixRow?.postMarketPrice);
+      const changePct = Number(niftyRow?.regularMarketChangePercent ?? 0);
+      const tsSec = Number(niftyRow?.regularMarketTime ?? Date.now()/1000);
+      const marketDate = formatIstDateLong(new Date(tsSec * 1000));
+
+      if(Number.isFinite(nifty) && Number.isFinite(vix)){
+        applyLiveSnapshot({ nifty, vix, mtd: changePct, marketDate });
+        feedSource = 'SRC: YAHOO QUOTES';
+        return;
+      }
+      throw new Error('Yahoo quote missing values');
+    }catch(e){
+      console.warn('Live refresh failed; leaving existing values.', e);
+      feedSource = 'SRC: STATIC FALLBACK';
+    }
+  }
+
+  function updateLiveDateLabels(){
+    const now = new Date();
+    const dateText = formatIstDateLong(now);
+    document.querySelectorAll('.js-live-date').forEach(el => { el.textContent = dateText; });
+    const headerDate = document.getElementById('live-date-header');
+    const footerDate = document.getElementById('footer-live-date');
+    if(headerDate) headerDate.textContent = dateText;
+    if(footerDate) footerDate.textContent = dateText;
+  }
+
+  function getRefreshConfig(){
+    const now = new Date();
+    const p = istParts(now);
+    const mins = p.hour * 60 + p.minute;
+    const isTradingDay = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].includes(p.weekday);
+
+    if(isTradingDay && mins >= MARKET_OPEN_MIN && mins <= MARKET_CLOSE_MIN){
+      return { mode: 'MARKET LIVE', delayMs: 60 * 1000 };
+    }
+    if(isTradingDay && mins < MARKET_OPEN_MIN){
+      return { mode: 'PRE-OPEN', delayMs: 5 * 60 * 1000 };
+    }
+    if(isTradingDay && mins <= (MARKET_CLOSE_MIN + 60)){
+      return { mode: 'POST-CLOSE', delayMs: 10 * 60 * 1000 };
+    }
+    return { mode: 'OFF HOURS', delayMs: 30 * 60 * 1000 };
+  }
+
+  function scheduleRefresh(){
+    if(refreshTimer) clearTimeout(refreshTimer);
+
+    updateLiveDateLabels();
+    const statusEl = document.getElementById('auto-refresh-status');
+    const cfg = getRefreshConfig();
+    const nextAt = new Date(Date.now() + cfg.delayMs);
+    if(statusEl){
+      if(countdownTimer) clearInterval(countdownTimer);
+      const renderStatus = () => {
+        const remainingMs = Math.max(nextAt.getTime() - Date.now(), 0);
+        const remainingSec = Math.floor(remainingMs / 1000);
+        const mm = String(Math.floor(remainingSec / 60)).padStart(2, '0');
+        const ss = String(remainingSec % 60).padStart(2, '0');
+        statusEl.textContent =
+          `AUTO REFRESH · ACTIVE · ${cfg.mode} · ${feedSource} · NEXT ${formatIstClock(nextAt)} · IN ${mm}:${ss}`;
+      };
+      renderStatus();
+      countdownTimer = setInterval(renderStatus, 1000);
+    }
+
+    refreshTimer = setTimeout(() => {
+      window.location.reload();
+    }, cfg.delayMs);
+  }
+
+  const refreshBtn = document.getElementById('refresh-now-btn');
+  if(refreshBtn){
+    refreshBtn.addEventListener('click', () => {
+      window.location.reload();
+    });
+  }
+
+  const retrainBtn = document.getElementById('retrain-now-btn');
+  if(retrainBtn){
+    retrainBtn.addEventListener('click', async () => {
+      const statusEl = document.getElementById('auto-refresh-status');
+      retrainBtn.disabled = true;
+      const prevText = retrainBtn.textContent;
+      retrainBtn.textContent = 'RETRAINING...';
+      if(statusEl) statusEl.textContent = 'AUTO REFRESH · ML RETRAIN IN PROGRESS...';
+      try{
+        const res = await fetch('/api/retrain', { method: 'POST' });
+        const out = await res.json();
+        if(!res.ok || !out?.ok){
+          throw new Error(out?.error || 'Retrain failed');
+        }
+        await refreshForecastFeed();
+        if(statusEl) statusEl.textContent = 'AUTO REFRESH · ML RETRAIN COMPLETED · FORECAST UPDATED';
+      }catch(e){
+        if(statusEl) statusEl.textContent = `AUTO REFRESH · ML RETRAIN FAILED · ${String(e?.message || e)}`;
+      }finally{
+        retrainBtn.disabled = false;
+        retrainBtn.textContent = prevText;
+        setTimeout(scheduleRefresh, 2000);
+      }
+    });
+  }
+
+  Promise.all([refreshLiveMarketFeed(), refreshForecastFeed()]).finally(scheduleRefresh);
+  setInterval(refreshLiveMarketFeed, 5 * 60 * 1000);
+  setInterval(refreshForecastFeed, 5 * 60 * 1000);
+  setInterval(updateLiveDateLabels, 30 * 1000);
+  window.addEventListener('focus', scheduleRefresh);
+  document.addEventListener('visibilitychange', () => {
+    if(!document.hidden) scheduleRefresh();
+  });
+})();
+</script>
+</body>
+</html>
